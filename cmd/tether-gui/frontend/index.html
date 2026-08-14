@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Tether</title>
+</head>
+<body>
+<div id="app">
+    <aside id="sidebar">
+        <div id="sidebar-header">
+            <span>Tether</span>
+            <button id="add-btn" title="Add connection">+</button>
+        </div>
+        <ul id="connection-list"></ul>
+    </aside>
+    <main id="main">
+        <div id="tab-bar"></div>
+        <div id="terminal-area"></div>
+        <div id="empty-state">
+            <p>Select a saved connection to start a session.</p>
+        </div>
+    </main>
+</div>
+
+<div id="add-modal" class="modal hidden">
+    <form id="add-form" class="modal-card">
+        <h2>Add connection</h2>
+        <label>Name<input name="name" required autocomplete="off"/></label>
+        <label>Host<input name="host" required autocomplete="off"/></label>
+        <label>User<input name="user" required autocomplete="off"/></label>
+        <label>Port<input name="port" type="number" value="22" required/></label>
+        <label>Identity file (optional)<input name="identityFile" placeholder="~/.ssh/id_ed25519" autocomplete="off"/></label>
+        <div id="add-error" class="error hidden"></div>
+        <div class="modal-actions">
+            <button type="button" id="add-cancel">Cancel</button>
+            <button type="submit" id="add-submit">Save</button>
+        </div>
+    </form>
+</div>
+
+<script src="./src/main.js" type="module"></script>
+</body>
+</html>

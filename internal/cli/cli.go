@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 
+	"github.com/BeardedTech0o/tether/internal/sshexec"
 	"github.com/BeardedTech0o/tether/internal/store"
 )
 
@@ -50,31 +50,10 @@ func Run(args []string) int {
 	}
 }
 
-// sshArgs builds the argument list for invoking the system ssh client for c.
-func sshArgs(c store.Connection) []string {
-	args := []string{"-p", fmt.Sprint(c.Port)}
-	if c.IdentityFile != "" {
-		args = append(args, "-i", expandHome(c.IdentityFile))
-	}
-	args = append(args, fmt.Sprintf("%s@%s", c.User, c.Host))
-	return args
-}
-
-func expandHome(path string) string {
-	if path == "~" || strings.HasPrefix(path, "~/") {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return path
-		}
-		return home + path[1:]
-	}
-	return path
-}
-
 // runSSH execs the system ssh binary against c, with stdio inherited from the
 // current process, and returns the exit code ssh terminated with.
 func runSSH(c store.Connection) int {
-	cmd := exec.Command("ssh", sshArgs(c)...)
+	cmd := exec.Command("ssh", sshexec.Args(c)...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

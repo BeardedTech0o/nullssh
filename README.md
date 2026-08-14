@@ -1,24 +1,33 @@
 # tether
 
-A small command-line SSH connection manager for Windows. Save your SSH
-connections once, then connect or switch between them by name — tether
-wraps your existing `ssh` client, it doesn't reimplement the protocol.
+An SSH connection manager for Windows. Save your SSH connections once,
+then connect or switch between them by name — tether wraps your existing
+`ssh` client, it doesn't reimplement the protocol.
+
+Two ways to use it, sharing the same saved connections
+(`%APPDATA%\tether\connections.json`):
+
+- **`tether-gui.exe`** — a desktop app: a sidebar of saved connections and
+  a tabbed, embedded terminal for each open session (Termius-style).
+- **`tether.exe`** — a scriptable command-line tool.
 
 ## Install
 
-Download `tether.exe` from the [Releases](https://github.com/BeardedTech0o/tether/releases)
-page, or build it yourself:
-
-```sh
-git clone https://github.com/BeardedTech0o/tether.git
-cd tether
-GOOS=windows GOARCH=amd64 go build -o tether.exe .
-```
+Download `tether.exe` and `tether-gui.exe` from the
+[Releases](https://github.com/BeardedTech0o/tether/releases) page, or
+build them yourself (see [Development](#development)).
 
 Requires the OpenSSH client (`ssh`) to be on your `PATH` — it's bundled
 with Windows 10 and later.
 
-## Usage
+## GUI
+
+Launch `tether-gui.exe`. Click **+** in the sidebar to save a connection,
+then click a saved connection to open it as a tab with a live terminal.
+Each tab runs its own `ssh` session; close a tab (✕) to end that session.
+Open multiple tabs to switch between active sessions.
+
+## CLI usage
 
 ```
 tether add <name> --host <host> --user <user> [--port 22] [--identity path]
@@ -72,17 +81,34 @@ deleted connection "staging"
 ## How it works
 
 Connections are stored as JSON in your user config directory
-(`%APPDATA%\tether\connections.json` on Windows). `connect`/`switch` shell
-out to the system `ssh` binary with the saved host, port, user, and
-identity file, so authentication (keys, agent, password prompts, known
-hosts) works exactly as it does with plain `ssh`. No credentials are
-stored by tether itself.
+(`%APPDATA%\tether\connections.json` on Windows). The CLI shells out to
+the system `ssh` binary directly; the GUI spawns `ssh` attached to a
+Windows pseudo-console (ConPTY) per tab and streams its output into an
+embedded terminal (xterm.js). Either way, authentication (keys, agent,
+password prompts, known hosts) works exactly as it does with plain `ssh`.
+No credentials are stored by tether itself.
 
 ## Development
+
+CLI (repo root, `github.com/BeardedTech0o/tether`):
 
 ```sh
 go vet ./...
 go test ./...
-go build -o tether.exe .          # native build
+go build -o tether.exe .                            # native build
 GOOS=windows GOARCH=amd64 go build -o tether.exe .   # cross-compile for Windows
 ```
+
+GUI (`cmd/tether-gui`, a nested Go module — needs the
+[Wails CLI](https://wails.io) and Node.js):
+
+```sh
+go install github.com/wailsapp/wails/v2/cmd/wails@latest
+cd cmd/tether-gui
+go vet ./...
+wails build -platform windows/amd64   # -> build/bin/tether-gui.exe
+```
+
+The ConPTY-backed terminal only works on Windows; `go build`/`go vet`
+still succeed on other platforms for development, but `OpenSession` will
+return an error since there's no pseudo-console backend for that OS.

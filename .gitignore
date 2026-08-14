@@ -1,2 +1,6 @@
 /bin/
 *.exe
+cmd/tether-gui/build/bin/
+cmd/tether-gui/frontend/dist/
+cmd/tether-gui/frontend/node_modules/
+cmd/tether-gui/frontend/wailsjs/
