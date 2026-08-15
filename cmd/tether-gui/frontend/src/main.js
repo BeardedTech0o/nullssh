@@ -8,6 +8,7 @@ import {
     AddConnection,
     UpdateConnection,
     DeleteConnection,
+    BrowseIdentityFile,
     OpenSession,
     WriteToSession,
     ResizeSession,
@@ -25,6 +26,7 @@ const addModalTitle = document.getElementById('add-modal-title');
 const addForm = document.getElementById('add-form');
 const addCancel = document.getElementById('add-cancel');
 const addError = document.getElementById('add-error');
+const browseIdentityBtn = document.getElementById('browse-identity-btn');
 
 // Name of the connection currently being edited, or null when the modal is
 // in "add" mode.
@@ -198,6 +200,18 @@ window.addEventListener('resize', () => {
 });
 
 // Add/edit connection modal
+
+browseIdentityBtn.addEventListener('click', async () => {
+    try {
+        const path = await BrowseIdentityFile();
+        if (path) {
+            addForm.identityFile.value = path;
+        }
+    } catch (err) {
+        addError.textContent = String(err);
+        addError.classList.remove('hidden');
+    }
+});
 
 addBtn.addEventListener('click', () => {
     editingName = null;

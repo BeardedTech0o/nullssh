@@ -3,6 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+
+	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"github.com/BeardedTech0o/tether/internal/store"
 )
@@ -106,6 +110,32 @@ func (a *App) UpdateConnection(oldName string, in AddConnectionInput) error {
 	}
 
 	return s.Save()
+}
+
+// BrowseIdentityFile opens a native file picker starting in the user's
+// .ssh directory (falling back to their home directory if .ssh doesn't
+// exist) so they can pick a private key file. Returns "" with no error if
+// the user cancels the dialog.
+func (a *App) BrowseIdentityFile() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("resolve home directory: %w", err)
+	}
+
+	dir := filepath.Join(home, ".ssh")
+	if info, err := os.Stat(dir); err != nil || !info.IsDir() {
+		dir = home
+	}
+
+	path, err := wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
+		Title:            "Select SSH identity file",
+		DefaultDirectory: dir,
+		ShowHiddenFiles:  true,
+	})
+	if err != nil {
+		return "", fmt.Errorf("open file dialog: %w", err)
+	}
+	return path, nil
 }
 
 // DeleteConnection removes a saved connection by name.

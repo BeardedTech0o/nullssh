@@ -30,7 +30,12 @@
         <label>Host<input name="host" required autocomplete="off"/></label>
         <label>User<input name="user" required autocomplete="off"/></label>
         <label>Port<input name="port" type="number" value="22" required/></label>
-        <label>Identity file (optional)<input name="identityFile" placeholder="~/.ssh/id_ed25519" autocomplete="off"/></label>
+        <label>Identity file (optional)
+            <span class="input-with-button">
+                <input name="identityFile" placeholder="~/.ssh/id_ed25519" autocomplete="off"/>
+                <button type="button" id="browse-identity-btn">Browse…</button>
+            </span>
+        </label>
         <div id="add-error" class="error hidden"></div>
         <div class="modal-actions">
             <button type="button" id="add-cancel">Cancel</button>
