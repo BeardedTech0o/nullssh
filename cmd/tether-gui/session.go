@@ -59,8 +59,22 @@ func (m *sessionManager) open(c store.Connection) (string, error) {
 }
 
 // pump reads PTY output and forwards it to the frontend as events until the
-// process exits or the PTY is closed.
+// process exits or the PTY is closed. It always cleans up and notifies the
+// frontend exactly once, even if reading panics — a panic on any goroutine
+// in a Wails app would otherwise crash the whole window, not just this
+// session, since the backend and the window share one OS process.
 func (m *sessionManager) pump(id string, p pty) {
+	defer func() {
+		recover()
+
+		m.mu.Lock()
+		delete(m.sessions, id)
+		m.mu.Unlock()
+
+		_ = p.Close()
+		runtime.EventsEmit(m.ctx, "session:"+id+":closed")
+	}()
+
 	buf := make([]byte, 32*1024)
 	for {
 		n, err := p.Read(buf)
@@ -68,15 +82,9 @@ func (m *sessionManager) pump(id string, p pty) {
 			runtime.EventsEmit(m.ctx, "session:"+id+":data", string(buf[:n]))
 		}
 		if err != nil {
-			break
+			return
 		}
 	}
-
-	m.mu.Lock()
-	delete(m.sessions, id)
-	m.mu.Unlock()
-
-	runtime.EventsEmit(m.ctx, "session:"+id+":closed")
 }
 
 func (m *sessionManager) get(id string) (pty, error) {

@@ -98,19 +98,31 @@ html, body {
     display: block;
 }
 
+.connection-actions {
+    display: flex;
+    gap: 2px;
+}
+
+.connection-edit,
 .connection-delete {
     background: none;
     border: none;
     color: var(--text-dim);
     cursor: pointer;
-    font-size: 14px;
+    font-size: 13px;
     padding: 4px 6px;
     border-radius: 4px;
     visibility: hidden;
 }
 
+.connection-item:hover .connection-edit,
 .connection-item:hover .connection-delete {
     visibility: visible;
+}
+
+.connection-edit:hover {
+    color: var(--accent);
+    background: rgba(79, 140, 255, 0.1);
 }
 
 .connection-delete:hover {

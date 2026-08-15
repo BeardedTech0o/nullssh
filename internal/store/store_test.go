@@ -38,6 +38,55 @@ func TestAddDuplicateNameFails(t *testing.T) {
 	}
 }
 
+func TestUpdate(t *testing.T) {
+	s := newTestStore(t)
+	if err := s.Add(Connection{Name: "prod", Host: "1.2.3.4", User: "root", Port: 22}); err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+	if err := s.Touch("prod"); err != nil {
+		t.Fatalf("Touch: %v", err)
+	}
+	lastUsed, _ := s.Get("prod")
+
+	if err := s.Update("prod", Connection{Name: "prod-renamed", Host: "5.6.7.8", User: "deploy", Port: 2222}); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+
+	if _, ok := s.Get("prod"); ok {
+		t.Fatal("Get() found connection under old name after rename")
+	}
+	c, ok := s.Get("prod-renamed")
+	if !ok {
+		t.Fatal("Get() did not find connection under new name after rename")
+	}
+	if c.Host != "5.6.7.8" || c.User != "deploy" || c.Port != 2222 {
+		t.Fatalf("updated connection mismatch: %+v", c)
+	}
+	if !c.LastUsed.Equal(lastUsed.LastUsed) {
+		t.Fatalf("Update() did not preserve LastUsed: got %v, want %v", c.LastUsed, lastUsed.LastUsed)
+	}
+}
+
+func TestUpdateRenameToExistingNameFails(t *testing.T) {
+	s := newTestStore(t)
+	if err := s.Add(Connection{Name: "prod", Host: "1.2.3.4", User: "root"}); err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+	if err := s.Add(Connection{Name: "staging", Host: "5.6.7.8", User: "deploy"}); err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+	if err := s.Update("prod", Connection{Name: "staging", Host: "1.2.3.4", User: "root"}); err == nil {
+		t.Fatal("Update() renaming onto an existing name succeeded, want error")
+	}
+}
+
+func TestUpdateMissingFails(t *testing.T) {
+	s := newTestStore(t)
+	if err := s.Update("nope", Connection{Name: "nope", Host: "h", User: "u"}); err == nil {
+		t.Fatal("Update() of missing connection succeeded, want error")
+	}
+}
+
 func TestDelete(t *testing.T) {
 	s := newTestStore(t)
 	if err := s.Add(Connection{Name: "prod", Host: "1.2.3.4", User: "root"}); err != nil {

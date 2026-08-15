@@ -53,13 +53,27 @@ type AddConnectionInput struct {
 	IdentityFile string `json:"identityFile"`
 }
 
-// AddConnection saves a new connection.
-func (a *App) AddConnection(in AddConnectionInput) error {
+func (in AddConnectionInput) toConnection() (store.Connection, error) {
 	if in.Name == "" || in.Host == "" || in.User == "" {
-		return fmt.Errorf("name, host, and user are required")
+		return store.Connection{}, fmt.Errorf("name, host, and user are required")
 	}
 	if in.Port == 0 {
 		in.Port = 22
+	}
+	return store.Connection{
+		Name:         in.Name,
+		Host:         in.Host,
+		Port:         in.Port,
+		User:         in.User,
+		IdentityFile: in.IdentityFile,
+	}, nil
+}
+
+// AddConnection saves a new connection.
+func (a *App) AddConnection(in AddConnectionInput) error {
+	c, err := in.toConnection()
+	if err != nil {
+		return err
 	}
 
 	s, err := store.Load()
@@ -67,13 +81,27 @@ func (a *App) AddConnection(in AddConnectionInput) error {
 		return fmt.Errorf("load connections: %w", err)
 	}
 
-	if err := s.Add(store.Connection{
-		Name:         in.Name,
-		Host:         in.Host,
-		Port:         in.Port,
-		User:         in.User,
-		IdentityFile: in.IdentityFile,
-	}); err != nil {
+	if err := s.Add(c); err != nil {
+		return err
+	}
+
+	return s.Save()
+}
+
+// UpdateConnection replaces the connection named oldName with in, which may
+// rename it.
+func (a *App) UpdateConnection(oldName string, in AddConnectionInput) error {
+	c, err := in.toConnection()
+	if err != nil {
+		return err
+	}
+
+	s, err := store.Load()
+	if err != nil {
+		return fmt.Errorf("load connections: %w", err)
+	}
+
+	if err := s.Update(oldName, c); err != nil {
 		return err
 	}
 
@@ -96,7 +124,9 @@ func (a *App) DeleteConnection(name string) error {
 // returns its session ID. The frontend should subscribe to
 // "session:<id>:data" and "session:<id>:closed" events before/after calling
 // this.
-func (a *App) OpenSession(name string) (string, error) {
+func (a *App) OpenSession(name string) (id string, err error) {
+	defer recoverToError(&err)
+
 	s, err := store.Load()
 	if err != nil {
 		return "", fmt.Errorf("load connections: %w", err)
@@ -113,16 +143,30 @@ func (a *App) OpenSession(name string) (string, error) {
 }
 
 // WriteToSession sends input (keystrokes) to an open session's PTY.
-func (a *App) WriteToSession(id string, data string) error {
+func (a *App) WriteToSession(id string, data string) (err error) {
+	defer recoverToError(&err)
 	return a.sessions.write(id, data)
 }
 
 // ResizeSession resizes an open session's PTY to match the frontend terminal.
-func (a *App) ResizeSession(id string, cols int, rows int) error {
+func (a *App) ResizeSession(id string, cols int, rows int) (err error) {
+	defer recoverToError(&err)
 	return a.sessions.resize(id, cols, rows)
 }
 
 // CloseSession terminates an open session and its ssh process.
-func (a *App) CloseSession(id string) error {
+func (a *App) CloseSession(id string) (err error) {
+	defer recoverToError(&err)
 	return a.sessions.close(id)
+}
+
+// recoverToError turns a panic in the deferring function into an error
+// instead of letting it escape. A Wails app is a single OS process shared
+// with the window itself, so an unrecovered panic on any goroutine —
+// including one triggered by a frontend-bound method call — would crash the
+// entire app, not just the feature that panicked.
+func recoverToError(err *error) {
+	if r := recover(); r != nil {
+		*err = fmt.Errorf("internal error: %v", r)
+	}
 }

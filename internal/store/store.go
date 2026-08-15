@@ -105,6 +105,24 @@ func (s *Store) Get(name string) (Connection, bool) {
 	return s.Connections[i], true
 }
 
+// Update replaces the connection named oldName with c, preserving its
+// LastUsed timestamp. c.Name may differ from oldName to rename the
+// connection, but fails if another connection already has that name.
+func (s *Store) Update(oldName string, c Connection) error {
+	i, ok := s.find(oldName)
+	if !ok {
+		return fmt.Errorf("no connection named %q", oldName)
+	}
+	if c.Name != oldName {
+		if _, exists := s.find(c.Name); exists {
+			return fmt.Errorf("a connection named %q already exists", c.Name)
+		}
+	}
+	c.LastUsed = s.Connections[i].LastUsed
+	s.Connections[i] = c
+	return nil
+}
+
 // Delete removes the connection with the given name. It fails if no such
 // connection exists.
 func (s *Store) Delete(name string) error {

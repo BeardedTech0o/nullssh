@@ -25,7 +25,9 @@ with Windows 10 and later.
 Launch `tether-gui.exe`. Click **+** in the sidebar to save a connection,
 then click a saved connection to open it as a tab with a live terminal.
 Each tab runs its own `ssh` session; close a tab (✕) to end that session.
-Open multiple tabs to switch between active sessions.
+Open multiple tabs to switch between active sessions. Hover a saved
+connection to reveal **✎ Edit** (change host/user/port/identity file, or
+rename it) and **✕ Delete**.
 
 ## CLI usage
 
@@ -84,9 +86,27 @@ Connections are stored as JSON in your user config directory
 (`%APPDATA%\tether\connections.json` on Windows). The CLI shells out to
 the system `ssh` binary directly; the GUI spawns `ssh` attached to a
 Windows pseudo-console (ConPTY) per tab and streams its output into an
-embedded terminal (xterm.js). Either way, authentication (keys, agent,
-password prompts, known hosts) works exactly as it does with plain `ssh`.
-No credentials are stored by tether itself.
+embedded terminal (xterm.js). Either way, tether is just running the real
+`ssh.exe` for you — it never handles your keys or passwords itself.
+
+### SSH keys and passwordless login
+
+tether stores **no credentials** — only the connection's host, port,
+user, and (optionally) a path to a private key file. Whether a session
+needs a password comes down to your normal OpenSSH setup, exactly as if
+you ran `ssh` yourself from a terminal:
+
+- **Identity file set on the connection** (the "Identity file" field in
+  the GUI, or `--identity` on the CLI) — tether passes it to `ssh` as
+  `-i <path>`, so that key is used for that connection.
+- **Identity file left blank** — `ssh` falls back to its own defaults:
+  keys already loaded in `ssh-agent`/Pageant, then the standard files in
+  `~/.ssh` (`id_ed25519`, `id_rsa`, etc.).
+- Either way, if the matching public key is authorized on the remote
+  host, you'll connect without a password prompt. If the key has a
+  passphrase and isn't already loaded in an agent, `ssh` will prompt for
+  the passphrase once per session — in the GUI this shows up right in
+  the embedded terminal, since it's a real interactive `ssh` process.
 
 ## Development
 

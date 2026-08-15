@@ -4,6 +4,7 @@ package main
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/UserExistsError/conpty"
 
@@ -11,9 +12,15 @@ import (
 	"github.com/BeardedTech0o/tether/internal/store"
 )
 
-// conptyPTY adapts *conpty.ConPty to the pty interface.
+// conptyPTY adapts *conpty.ConPty to the pty interface. Close may be called
+// both by an explicit CloseSession request and by the read-pump's own
+// cleanup once the process exits, so it's made idempotent with closeOnce —
+// calling conpty.Close twice, or closing while a Read is still in flight,
+// is not guaranteed to be safe otherwise.
 type conptyPTY struct {
-	cpty *conpty.ConPty
+	cpty      *conpty.ConPty
+	closeOnce sync.Once
+	closeErr  error
 }
 
 func startPTY(c store.Connection) (pty, error) {
@@ -40,5 +47,8 @@ func (p *conptyPTY) Resize(cols, rows int) error {
 }
 
 func (p *conptyPTY) Close() error {
-	return p.cpty.Close()
+	p.closeOnce.Do(func() {
+		p.closeErr = p.cpty.Close()
+	})
+	return p.closeErr
 }

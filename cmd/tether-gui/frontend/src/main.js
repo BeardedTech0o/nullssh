@@ -6,6 +6,7 @@ import {FitAddon} from '@xterm/addon-fit';
 import {
     ListConnections,
     AddConnection,
+    UpdateConnection,
     DeleteConnection,
     OpenSession,
     WriteToSession,
@@ -20,9 +21,14 @@ const terminalAreaEl = document.getElementById('terminal-area');
 const emptyStateEl = document.getElementById('empty-state');
 const addBtn = document.getElementById('add-btn');
 const addModal = document.getElementById('add-modal');
+const addModalTitle = document.getElementById('add-modal-title');
 const addForm = document.getElementById('add-form');
 const addCancel = document.getElementById('add-cancel');
 const addError = document.getElementById('add-error');
+
+// Name of the connection currently being edited, or null when the modal is
+// in "add" mode.
+let editingName = null;
 
 /** @type {Map<string, {name: string, term: Terminal, fit: FitAddon, pane: HTMLElement, tab: HTMLElement}>} */
 const sessions = new Map();
@@ -54,6 +60,15 @@ async function refreshConnections() {
         info.appendChild(name);
         info.appendChild(target);
 
+        const edit = document.createElement('button');
+        edit.className = 'connection-edit';
+        edit.textContent = '✎';
+        edit.title = 'Edit connection';
+        edit.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openEditModal(c);
+        });
+
         const del = document.createElement('button');
         del.className = 'connection-delete';
         del.textContent = '✕';
@@ -64,8 +79,13 @@ async function refreshConnections() {
             await refreshConnections();
         });
 
+        const actions = document.createElement('div');
+        actions.className = 'connection-actions';
+        actions.appendChild(edit);
+        actions.appendChild(del);
+
         li.appendChild(info);
-        li.appendChild(del);
+        li.appendChild(actions);
         li.addEventListener('click', () => openConnection(c.name));
 
         connectionListEl.appendChild(li);
@@ -177,15 +197,31 @@ window.addEventListener('resize', () => {
     }
 });
 
-// Add-connection modal
+// Add/edit connection modal
 
 addBtn.addEventListener('click', () => {
+    editingName = null;
+    addModalTitle.textContent = 'Add connection';
     addError.classList.add('hidden');
     addForm.reset();
     addForm.port.value = 22;
     addModal.classList.remove('hidden');
     addForm.name.focus();
 });
+
+function openEditModal(c) {
+    editingName = c.name;
+    addModalTitle.textContent = 'Edit connection';
+    addError.classList.add('hidden');
+    addForm.reset();
+    addForm.name.value = c.name;
+    addForm.host.value = c.host;
+    addForm.user.value = c.user;
+    addForm.port.value = c.port;
+    addForm.identityFile.value = c.identityFile || c.identity_file || '';
+    addModal.classList.remove('hidden');
+    addForm.name.focus();
+}
 
 addCancel.addEventListener('click', () => {
     addModal.classList.add('hidden');
@@ -204,7 +240,11 @@ addForm.addEventListener('submit', async (e) => {
     };
 
     try {
-        await AddConnection(input);
+        if (editingName) {
+            await UpdateConnection(editingName, input);
+        } else {
+            await AddConnection(input);
+        }
         addModal.classList.add('hidden');
         await refreshConnections();
     } catch (err) {
