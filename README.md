@@ -7,27 +7,30 @@ then connect or switch between them by name — tether wraps your existing
 Two ways to use it, sharing the same saved connections
 (`%APPDATA%\tether\connections.json`):
 
-- **`tether-gui.exe`** — a desktop app: a sidebar of saved connections and
-  a tabbed, embedded terminal for each open session (Termius-style).
-- **`tether.exe`** — a scriptable command-line tool.
+- **GUI** — a desktop app: a sidebar of saved connections and a tabbed,
+  embedded terminal for each open session (Termius-style).
+- **CLI** (`tether-cli.exe`) — a scriptable command-line tool.
 
 ## Install
 
 Download from the [Releases](https://github.com/BeardedTech0o/tether/releases)
 page, or build them yourself (see [Development](#development)):
 
-- **`tether-gui-amd64-installer.exe`** — the installable GUI: runs a normal
-  Windows install wizard, adds Start Menu and Desktop shortcuts, and
-  registers an uninstaller in "Add or remove programs".
-- **`tether-gui.exe`** — the same GUI as a portable exe, no install step.
-- **`tether.exe`** — the portable CLI.
+- **`Tether-Setup.exe`** — the installer: runs a normal Windows install
+  wizard, adds Start Menu and Desktop shortcuts, and registers an
+  uninstaller in "Add or remove programs". Use this unless you have a
+  reason not to.
+- **`tether-portable.exe`** — the same GUI as a portable exe, no install
+  step (just run it from wherever you put it).
+- **`tether-cli.exe`** — the portable CLI.
 
 Requires the OpenSSH client (`ssh`) to be on your `PATH` — it's bundled
 with Windows 10 and later.
 
 ## GUI
 
-Launch `tether-gui.exe`. Click **+** in the sidebar to save a connection,
+Launch Tether (from the Start Menu if you used the installer, or by
+running `tether-portable.exe`). Click **+** in the sidebar to save a connection,
 then click a saved connection to open it as a tab with a live terminal.
 Each tab runs its own `ssh` session; close a tab (✕) to end that session.
 Open multiple tabs to switch between active sessions. Hover a saved
@@ -37,26 +40,26 @@ rename it) and **✕ Delete**.
 ## CLI usage
 
 ```
-tether add <name> --host <host> --user <user> [--port 22] [--identity path]
-tether ls
-tether rm <name>
-tether connect <name>
-tether switch
+tether-cli add <name> --host <host> --user <user> [--port 22] [--identity path]
+tether-cli ls
+tether-cli rm <name>
+tether-cli connect <name>
+tether-cli switch
 ```
 
-Running `tether` with no arguments is the same as `tether switch`.
+Running `tether-cli` with no arguments is the same as `tether-cli switch`.
 
 ### Save a connection
 
 ```
-> tether add prod --host 203.0.113.10 --user deploy --identity ~/.ssh/id_ed25519
+> tether-cli add prod --host 203.0.113.10 --user deploy --identity ~/.ssh/id_ed25519
 saved connection "prod" (deploy@203.0.113.10:22)
 ```
 
 ### List saved connections
 
 ```
-> tether ls
+> tether-cli ls
 NAME     TARGET                    LAST USED
 prod     deploy@203.0.113.10:22   2026-08-14 21:03
 staging  deploy@203.0.113.11:22   never
@@ -65,13 +68,13 @@ staging  deploy@203.0.113.11:22   never
 ### Connect / switch
 
 ```
-> tether connect prod
+> tether-cli connect prod
 ```
 
 or pick interactively, most-recently-used first:
 
 ```
-> tether switch
+> tether-cli switch
 Saved connections (most recently used first):
   1) prod                 deploy@203.0.113.10:22
   2) staging               deploy@203.0.113.11:22
@@ -81,7 +84,7 @@ Select a connection (number or name), or q to quit:
 ### Delete a connection
 
 ```
-> tether rm staging
+> tether-cli rm staging
 deleted connection "staging"
 ```
 
@@ -120,8 +123,8 @@ CLI (repo root, `github.com/BeardedTech0o/tether`):
 ```sh
 go vet ./...
 go test ./...
-go build -o tether.exe .                            # native build
-GOOS=windows GOARCH=amd64 go build -o tether.exe .   # cross-compile for Windows
+go build -o tether-cli.exe .                            # native build
+GOOS=windows GOARCH=amd64 go build -o tether-cli.exe .   # cross-compile for Windows
 ```
 
 GUI (`cmd/tether-gui`, a nested Go module — needs the
@@ -131,8 +134,8 @@ GUI (`cmd/tether-gui`, a nested Go module — needs the
 go install github.com/wailsapp/wails/v2/cmd/wails@latest
 cd cmd/tether-gui
 go vet ./...
-wails build -platform windows/amd64         # -> build/bin/tether-gui.exe
-wails build -platform windows/amd64 -nsis   # also -> build/bin/tether-gui-amd64-installer.exe (needs NSIS's makensis on PATH)
+wails build -platform windows/amd64         # -> build/bin/tether-portable.exe
+wails build -platform windows/amd64 -nsis   # also -> build/bin/tether-gui-amd64-installer.exe (renamed to Tether-Setup.exe in CI; needs NSIS's makensis on PATH)
 ```
 
 The ConPTY-backed terminal only works on Windows; `go build`/`go vet`

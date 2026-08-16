@@ -21,16 +21,16 @@ jobs:
       - name: Test
         run: go test ./...
 
-      - name: Build tether.exe
+      - name: Build tether-cli.exe
         env:
           GOOS: windows
           GOARCH: amd64
-        run: go build -o tether.exe .
+        run: go build -o tether-cli.exe .
 
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          files: tether.exe
+          files: tether-cli.exe
           generate_release_notes: true
 
   build-gui:
@@ -55,21 +55,22 @@ jobs:
           choco install nsis -y
           echo "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-      - name: Build tether-gui.exe and installer
+      - name: Build tether-portable.exe and installer
         working-directory: cmd/tether-gui
         run: wails build -platform windows/amd64 -nsis
 
-      - name: Verify installer was produced
+      - name: Verify installer was produced and rename to Tether-Setup.exe
         working-directory: cmd/tether-gui
         run: |
           if (-not (Test-Path "build\bin\tether-gui-amd64-installer.exe")) {
             Write-Error "NSIS installer was not produced (wails build only warns, doesn't fail, if makensis is missing)"
             exit 1
           }
+          Move-Item "build\bin\tether-gui-amd64-installer.exe" "build\bin\Tether-Setup.exe"
 
       - name: Upload tether-gui to release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            cmd/tether-gui/build/bin/tether-gui.exe
-            cmd/tether-gui/build/bin/tether-gui-amd64-installer.exe
+            cmd/tether-gui/build/bin/tether-portable.exe
+            cmd/tether-gui/build/bin/Tether-Setup.exe
