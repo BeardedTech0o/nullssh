@@ -13,13 +13,15 @@
             <button id="add-btn" title="Add connection">+</button>
         </div>
         <ul id="connection-list"></ul>
-        <div id="snippets-section">
-            <div id="snippets-header">tmux snippets</div>
-            <ul id="snippets-list"></ul>
-        </div>
     </aside>
     <main id="main">
-        <div id="tab-bar"></div>
+        <div id="tab-bar">
+            <div id="tabs-container"></div>
+            <details id="snippets-section">
+                <summary id="snippets-header">tmux snippets</summary>
+                <ul id="snippets-list"></ul>
+            </details>
+        </div>
         <div id="terminal-area"></div>
         <div id="empty-state">
             <p>Select a saved connection to start a session.</p>

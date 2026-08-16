@@ -17,7 +17,7 @@ import {
 import {EventsOn, EventsOff, ClipboardGetText} from '../wailsjs/runtime/runtime';
 
 const connectionListEl = document.getElementById('connection-list');
-const tabBarEl = document.getElementById('tab-bar');
+const tabsContainerEl = document.getElementById('tabs-container');
 const terminalAreaEl = document.getElementById('terminal-area');
 const emptyStateEl = document.getElementById('empty-state');
 const addBtn = document.getElementById('add-btn');
@@ -27,6 +27,7 @@ const addForm = document.getElementById('add-form');
 const addCancel = document.getElementById('add-cancel');
 const addError = document.getElementById('add-error');
 const browseIdentityBtn = document.getElementById('browse-identity-btn');
+const snippetsSectionEl = document.getElementById('snippets-section');
 const snippetsListEl = document.getElementById('snippets-list');
 
 // Name of the connection currently being edited, or null when the modal is
@@ -74,6 +75,8 @@ function renderSnippets() {
 }
 
 function insertSnippet(command) {
+    snippetsSectionEl.open = false;
+
     if (!activeSessionId || !sessions.has(activeSessionId)) {
         alert('Open a session first, then click a snippet to insert it.');
         return;
@@ -84,6 +87,13 @@ function insertSnippet(command) {
     WriteToSession(activeSessionId, command).catch((err) => console.error(err));
     sessions.get(activeSessionId).term.focus();
 }
+
+// Close the dropdown on an outside click, like a normal menu.
+document.addEventListener('click', (e) => {
+    if (snippetsSectionEl.open && !snippetsSectionEl.contains(e.target)) {
+        snippetsSectionEl.open = false;
+    }
+});
 
 async function refreshConnections() {
     const conns = await ListConnections();
@@ -234,7 +244,7 @@ async function openConnection(name) {
     tab.appendChild(label);
     tab.appendChild(closeBtn);
     tab.addEventListener('click', () => activateSession(id));
-    tabBarEl.appendChild(tab);
+    tabsContainerEl.appendChild(tab);
 
     // Re-fit after output arrives: the terminal's column count is computed
     // before xterm's own scrollbar appears, so once enough output triggers

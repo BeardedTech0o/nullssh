@@ -64,7 +64,7 @@ running `tether-portable.exe`).
 5. Hover a saved connection to reveal **✎ Edit** (change any field, or
    rename it) and **✕ Delete**.
 
-**tmux snippets** — the panel at the bottom of the sidebar inserts a
+**tmux snippets** — the dropdown on the right of the tab bar inserts a
 common `tmux` command into the active terminal without submitting it, so
 you can edit it (e.g. swap out `mysession` for a real name) before
 pressing Enter.
