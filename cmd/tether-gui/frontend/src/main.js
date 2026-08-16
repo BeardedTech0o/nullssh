@@ -14,7 +14,7 @@ import {
     ResizeSession,
     CloseSession,
 } from '../wailsjs/go/main/App';
-import {EventsOn, EventsOff} from '../wailsjs/runtime/runtime';
+import {EventsOn, EventsOff, ClipboardGetText} from '../wailsjs/runtime/runtime';
 
 const connectionListEl = document.getElementById('connection-list');
 const tabBarEl = document.getElementById('tab-bar');
@@ -144,6 +144,40 @@ async function refreshConnections() {
     }
 }
 
+// xterm.js normally handles paste via the browser's native "paste" event
+// landing on its hidden input element, but that doesn't fire reliably
+// inside WebView2 (the GUI's embedded browser on Windows), and the
+// standard browser clipboard API additionally needs permission grants
+// that a WebView2 app doesn't have by default. Handle the common paste
+// gestures explicitly via Wails' native clipboard binding instead: Ctrl+V,
+// Shift+Insert, and right-click (PuTTY/Windows-terminal convention).
+function attachPasteHandling(term, pane) {
+    async function pasteFromClipboard() {
+        try {
+            const text = await ClipboardGetText();
+            if (text) term.paste(text);
+        } catch (err) {
+            console.error('paste failed:', err);
+        }
+    }
+
+    term.attachCustomKeyEventHandler((event) => {
+        if (event.type !== 'keydown') return true;
+        const isCtrlV = event.ctrlKey && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'v';
+        const isShiftInsert = event.shiftKey && event.key === 'Insert';
+        if (isCtrlV || isShiftInsert) {
+            pasteFromClipboard();
+            return false;
+        }
+        return true;
+    });
+
+    pane.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        pasteFromClipboard();
+    });
+}
+
 function updateEmptyState() {
     const hasSessions = sessions.size > 0;
     emptyStateEl.classList.toggle('hidden', hasSessions);
@@ -171,6 +205,7 @@ async function openConnection(name) {
     const fit = new FitAddon();
     term.loadAddon(fit);
     term.open(pane);
+    attachPasteHandling(term, pane);
 
     term.onData((data) => {
         WriteToSession(id, data).catch((err) => console.error(err));

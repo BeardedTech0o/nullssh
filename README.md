@@ -42,6 +42,8 @@ common `tmux` command into the active session's terminal without
 submitting it — you can edit it (e.g. swap out `mysession`) and press
 Enter yourself.
 
+Paste into a terminal with **Ctrl+V**, **Shift+Insert**, or right-click.
+
 ## CLI usage
 
 ```
