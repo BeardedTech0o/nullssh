@@ -76,6 +76,8 @@ pressing Enter.
 
 Paste into a terminal with Ctrl+V, Shift+Insert, or right-click.
 
+![Tether Connection Settings](https://raw.githubusercontent.com/BeardedTech0o/tether/main/internal/tether.png)
+
 ## Using the CLI
 
 ```
