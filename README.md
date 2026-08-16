@@ -13,9 +13,14 @@ Two ways to use it, sharing the same saved connections
 
 ## Install
 
-Download `tether.exe` and `tether-gui.exe` from the
-[Releases](https://github.com/BeardedTech0o/tether/releases) page, or
-build them yourself (see [Development](#development)).
+Download from the [Releases](https://github.com/BeardedTech0o/tether/releases)
+page, or build them yourself (see [Development](#development)):
+
+- **`tether-gui-amd64-installer.exe`** — the installable GUI: runs a normal
+  Windows install wizard, adds Start Menu and Desktop shortcuts, and
+  registers an uninstaller in "Add or remove programs".
+- **`tether-gui.exe`** — the same GUI as a portable exe, no install step.
+- **`tether.exe`** — the portable CLI.
 
 Requires the OpenSSH client (`ssh`) to be on your `PATH` — it's bundled
 with Windows 10 and later.
@@ -126,7 +131,8 @@ GUI (`cmd/tether-gui`, a nested Go module — needs the
 go install github.com/wailsapp/wails/v2/cmd/wails@latest
 cd cmd/tether-gui
 go vet ./...
-wails build -platform windows/amd64   # -> build/bin/tether-gui.exe
+wails build -platform windows/amd64         # -> build/bin/tether-gui.exe
+wails build -platform windows/amd64 -nsis   # also -> build/bin/tether-gui-amd64-installer.exe (needs NSIS's makensis on PATH)
 ```
 
 The ConPTY-backed terminal only works on Windows; `go build`/`go vet`

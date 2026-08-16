@@ -50,11 +50,16 @@ jobs:
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
-      - name: Build tether-gui.exe
-        working-directory: cmd/tether-gui
-        run: wails build -platform windows/amd64
+      - name: Install NSIS
+        run: choco install nsis -y
 
-      - name: Upload tether-gui.exe to release
+      - name: Build tether-gui.exe and installer
+        working-directory: cmd/tether-gui
+        run: wails build -platform windows/amd64 -nsis
+
+      - name: Upload tether-gui to release
         uses: softprops/action-gh-release@v2
         with:
-          files: cmd/tether-gui/build/bin/tether-gui.exe
+          files: |
+            cmd/tether-gui/build/bin/tether-gui.exe
+            cmd/tether-gui/build/bin/tether-gui-amd64-installer.exe
