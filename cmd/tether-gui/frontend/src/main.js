@@ -53,6 +53,7 @@ async function refreshConnections() {
         li.className = 'connection-item';
 
         const info = document.createElement('div');
+        info.className = 'connection-info';
         const name = document.createElement('span');
         name.className = 'connection-name';
         name.textContent = c.name;
@@ -138,6 +139,12 @@ async function openConnection(name) {
     closeBtn.textContent = '✕';
     closeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
+        // Remove the tab immediately rather than waiting for the backend's
+        // "closed" event: a remote process can keep the pty's read pending
+        // (e.g. a detached tmux session), which would otherwise leave the
+        // tab stuck open even though the user asked to close it. The
+        // CloseSession call still runs to tear down the ssh process.
+        removeSession(id);
         CloseSession(id).catch((err) => console.error(err));
     });
     tab.appendChild(label);
@@ -145,8 +152,25 @@ async function openConnection(name) {
     tab.addEventListener('click', () => activateSession(id));
     tabBarEl.appendChild(tab);
 
+    // Re-fit after output arrives: the terminal's column count is computed
+    // before xterm's own scrollbar appears, so once enough output triggers
+    // scrollback the scrollbar starts overlapping the last column unless we
+    // recompute. Throttled to at most once per animation frame.
+    let fitScheduled = false;
+    function scheduleFit() {
+        if (fitScheduled) return;
+        fitScheduled = true;
+        requestAnimationFrame(() => {
+            fitScheduled = false;
+            // Fitting a hidden pane (display:none) would collapse it to
+            // 0 cols/rows, so only refit while this tab is the visible one.
+            if (id === activeSessionId) fit.fit();
+        });
+    }
+
     EventsOn(`session:${id}:data`, (chunk) => {
         term.write(chunk);
+        scheduleFit();
     });
     EventsOn(`session:${id}:closed`, () => {
         removeSession(id);

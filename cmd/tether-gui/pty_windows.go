@@ -3,6 +3,7 @@
 package main
 
 import (
+	"os"
 	"strings"
 	"sync"
 
@@ -48,6 +49,14 @@ func (p *conptyPTY) Resize(cols, rows int) error {
 
 func (p *conptyPTY) Close() error {
 	p.closeOnce.Do(func() {
+		// conpty.Close only closes handles/pipes; despite its doc comment it
+		// does not actually call TerminateProcess, so the spawned ssh
+		// process (and anything it's still waiting on, e.g. a remote tmux
+		// session) can keep running and leave a pending Read() that never
+		// unblocks. Kill it explicitly by PID first.
+		if proc, err := os.FindProcess(p.cpty.Pid()); err == nil {
+			_ = proc.Kill()
+		}
 		p.closeErr = p.cpty.Close()
 	})
 	return p.closeErr
