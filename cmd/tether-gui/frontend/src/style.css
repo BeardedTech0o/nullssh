@@ -265,14 +265,35 @@ html, body {
     display: block;
 }
 
-/* xterm's vertical scrollbar only reserves width once it actually
-   appears, so the column count gets computed as if it weren't there and
-   the scrollbar ends up overlapping the last column of text once
-   scrollback kicks in. Reserving the gutter permanently means the
-   available width — and therefore the column count — never has to
-   change when the scrollbar toggles on. */
+/* xterm sets overflow-y: scroll on its viewport (always-on scrollbar),
+   which should always reserve layout width for it — but Chromium/WebView2
+   can still render an "overlay" scrollbar that paints on top of content
+   without reducing clientWidth, regardless of overflow-y. FitAddon then
+   computes columns as if the full width were available, and the overlay
+   scrollbar ends up covering the last column. Styling ::-webkit-scrollbar
+   forces Chromium out of overlay mode into classic, space-reserving
+   scrollbars, so the reserved gutter here is real and FitAddon accounts
+   for it correctly. scrollbar-gutter is kept as a belt-and-suspenders for
+   engines where that alone would have been sufficient. */
 .terminal-pane .xterm-viewport {
     scrollbar-gutter: stable;
+}
+
+.terminal-pane .xterm-viewport::-webkit-scrollbar {
+    width: 10px;
+}
+
+.terminal-pane .xterm-viewport::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.terminal-pane .xterm-viewport::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 6px;
+}
+
+.terminal-pane .xterm-viewport::-webkit-scrollbar-thumb:hover {
+    background: var(--text-dim);
 }
 
 #empty-state {
