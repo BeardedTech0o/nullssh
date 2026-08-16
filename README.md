@@ -37,6 +37,11 @@ Open multiple tabs to switch between active sessions. Hover a saved
 connection to reveal **✎ Edit** (change host/user/port/identity file, or
 rename it) and **✕ Delete**.
 
+The **tmux snippets** panel at the bottom of the sidebar inserts a
+common `tmux` command into the active session's terminal without
+submitting it — you can edit it (e.g. swap out `mysession`) and press
+Enter yourself.
+
 ## CLI usage
 
 ```

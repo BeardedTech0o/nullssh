@@ -27,6 +27,7 @@ const addForm = document.getElementById('add-form');
 const addCancel = document.getElementById('add-cancel');
 const addError = document.getElementById('add-error');
 const browseIdentityBtn = document.getElementById('browse-identity-btn');
+const snippetsListEl = document.getElementById('snippets-list');
 
 // Name of the connection currently being edited, or null when the modal is
 // in "add" mode.
@@ -35,6 +36,54 @@ let editingName = null;
 /** @type {Map<string, {name: string, term: Terminal, fit: FitAddon, pane: HTMLElement, tab: HTMLElement}>} */
 const sessions = new Map();
 let activeSessionId = null;
+
+// Commands only (no key-chord shortcuts like "Ctrl+b d"): those are typed
+// into a shell and can be edited before pressing Enter, which is the whole
+// point of a snippet. A chord like Ctrl+b is sent as raw control bytes and
+// acts immediately, so it doesn't fit this "insert, then edit" model.
+const TMUX_SNIPPETS = [
+    {label: 'New session', command: 'tmux new -s mysession'},
+    {label: 'List sessions', command: 'tmux ls'},
+    {label: 'Attach to session', command: 'tmux attach -t mysession'},
+    {label: 'Attach, detaching others', command: 'tmux attach -d -t mysession'},
+    {label: 'Rename session', command: 'tmux rename-session -t mysession newname'},
+    {label: 'Kill session', command: 'tmux kill-session -t mysession'},
+    {label: 'Kill all other sessions', command: 'tmux kill-session -a'},
+];
+
+function renderSnippets() {
+    snippetsListEl.innerHTML = '';
+    for (const s of TMUX_SNIPPETS) {
+        const li = document.createElement('li');
+        li.className = 'snippet-item';
+        li.title = 'Insert into the active session (not submitted)';
+
+        const label = document.createElement('span');
+        label.className = 'snippet-label';
+        label.textContent = s.label;
+        const command = document.createElement('span');
+        command.className = 'snippet-command';
+        command.textContent = s.command;
+
+        li.appendChild(label);
+        li.appendChild(command);
+        li.addEventListener('click', () => insertSnippet(s.command));
+
+        snippetsListEl.appendChild(li);
+    }
+}
+
+function insertSnippet(command) {
+    if (!activeSessionId || !sessions.has(activeSessionId)) {
+        alert('Open a session first, then click a snippet to insert it.');
+        return;
+    }
+    // No trailing newline: this types the command into the terminal without
+    // submitting it, so it can be edited (e.g. replacing "mysession")
+    // before pressing Enter.
+    WriteToSession(activeSessionId, command).catch((err) => console.error(err));
+    sessions.get(activeSessionId).term.focus();
+}
 
 async function refreshConnections() {
     const conns = await ListConnections();
@@ -293,3 +342,4 @@ addForm.addEventListener('submit', async (e) => {
 
 updateEmptyState();
 refreshConnections();
+renderSnippets();
