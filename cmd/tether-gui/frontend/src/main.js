@@ -13,9 +13,13 @@ import {
     WriteToSession,
     ResizeSession,
     CloseSession,
+    HasMasterPassword,
+    CreateMasterPassword,
+    UnlockMasterPassword,
 } from '../wailsjs/go/main/App';
 import {EventsOn, EventsOff, ClipboardGetText} from '../wailsjs/runtime/runtime';
 
+const appEl = document.getElementById('app');
 const connectionListEl = document.getElementById('connection-list');
 const tabsContainerEl = document.getElementById('tabs-container');
 const terminalAreaEl = document.getElementById('terminal-area');
@@ -27,8 +31,15 @@ const addForm = document.getElementById('add-form');
 const addCancel = document.getElementById('add-cancel');
 const addError = document.getElementById('add-error');
 const browseIdentityBtn = document.getElementById('browse-identity-btn');
+const clearPasswordRow = document.getElementById('clear-password-row');
 const snippetsSectionEl = document.getElementById('snippets-section');
 const snippetsListEl = document.getElementById('snippets-list');
+const authOverlay = document.getElementById('auth-overlay');
+const authTitle = document.getElementById('auth-title');
+const authDescription = document.getElementById('auth-description');
+const authConfirmRow = document.getElementById('auth-confirm-row');
+const authForm = document.getElementById('auth-form');
+const authError = document.getElementById('auth-error');
 
 // Name of the connection currently being edited, or null when the modal is
 // in "add" mode.
@@ -337,6 +348,8 @@ addBtn.addEventListener('click', () => {
     addError.classList.add('hidden');
     addForm.reset();
     addForm.port.value = 22;
+    addForm.password.placeholder = '';
+    clearPasswordRow.classList.add('hidden');
     addModal.classList.remove('hidden');
     addForm.name.focus();
 });
@@ -351,6 +364,9 @@ function openEditModal(c) {
     addForm.user.value = c.user;
     addForm.port.value = c.port;
     addForm.identityFile.value = c.identityFile || c.identity_file || '';
+    addForm.password.placeholder = c.hasPassword ? 'Leave blank to keep saved password' : 'No password saved';
+    clearPasswordRow.classList.toggle('hidden', !c.hasPassword);
+    addForm.clearPassword.checked = false;
     addModal.classList.remove('hidden');
     addForm.name.focus();
 }
@@ -369,6 +385,8 @@ addForm.addEventListener('submit', async (e) => {
         user: addForm.user.value.trim(),
         port: parseInt(addForm.port.value, 10) || 22,
         identityFile: addForm.identityFile.value.trim(),
+        password: addForm.password.value,
+        clearPassword: addForm.clearPassword.checked,
     };
 
     try {
@@ -385,6 +403,63 @@ addForm.addEventListener('submit', async (e) => {
     }
 });
 
-updateEmptyState();
-refreshConnections();
-renderSnippets();
+// Master password gate. The vault key lives only in the Go backend's
+// memory for this run; nothing about it is kept in the frontend beyond
+// which mode (create vs. unlock) the overlay is currently showing.
+let authMode = null; // 'create' | 'unlock'
+
+async function startAuthFlow() {
+    const hasMaster = await HasMasterPassword();
+    authMode = hasMaster ? 'unlock' : 'create';
+
+    if (authMode === 'create') {
+        authTitle.textContent = 'Set a master password';
+        authDescription.textContent = 'This protects any saved connection passwords and will be required every time you open Tether. It cannot be recovered if you lose it.';
+        authConfirmRow.classList.remove('hidden');
+        authForm.confirmPassword.required = true;
+    } else {
+        authTitle.textContent = 'Enter master password';
+        authDescription.textContent = 'Enter your master password to continue.';
+        authConfirmRow.classList.add('hidden');
+        authForm.confirmPassword.required = false;
+    }
+
+    authError.classList.add('hidden');
+    authForm.reset();
+    authOverlay.classList.remove('hidden');
+    authForm.password.focus();
+}
+
+authForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    authError.classList.add('hidden');
+
+    const password = authForm.password.value;
+
+    try {
+        if (authMode === 'create') {
+            if (password !== authForm.confirmPassword.value) {
+                throw new Error('passwords do not match');
+            }
+            await CreateMasterPassword(password);
+        } else {
+            await UnlockMasterPassword(password);
+        }
+        authOverlay.classList.add('hidden');
+        unlockApp();
+    } catch (err) {
+        authError.textContent = String(err);
+        authError.classList.remove('hidden');
+        authForm.password.value = '';
+        authForm.password.focus();
+    }
+});
+
+function unlockApp() {
+    appEl.classList.remove('hidden');
+    updateEmptyState();
+    refreshConnections();
+    renderSnippets();
+}
+
+startAuthFlow();

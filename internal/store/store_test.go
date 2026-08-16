@@ -12,6 +12,31 @@ func newTestStore(t *testing.T) *Store {
 	return &Store{path: filepath.Join(t.TempDir(), "connections.json")}
 }
 
+func TestMasterConfigRoundTrip(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+
+	mc, err := LoadMasterConfig()
+	if err != nil {
+		t.Fatalf("LoadMasterConfig (before setup): %v", err)
+	}
+	if mc != nil {
+		t.Fatalf("LoadMasterConfig (before setup) = %+v, want nil", mc)
+	}
+
+	want := &MasterConfig{Salt: "c2FsdA==", Check: "Y2hlY2s="}
+	if err := SaveMasterConfig(want); err != nil {
+		t.Fatalf("SaveMasterConfig: %v", err)
+	}
+
+	got, err := LoadMasterConfig()
+	if err != nil {
+		t.Fatalf("LoadMasterConfig (after setup): %v", err)
+	}
+	if got == nil || got.Salt != want.Salt || got.Check != want.Check {
+		t.Fatalf("LoadMasterConfig() = %+v, want %+v", got, want)
+	}
+}
+
 func TestAddAndList(t *testing.T) {
 	s := newTestStore(t)
 

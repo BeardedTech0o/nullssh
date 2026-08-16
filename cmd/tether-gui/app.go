@@ -2,20 +2,31 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
+	"time"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
+	"github.com/BeardedTech0o/tether/cmd/tether-gui/vault"
 	"github.com/BeardedTech0o/tether/internal/store"
 )
 
-// App is bound to the frontend and exposes connection management plus the
-// session manager (see session.go).
+// App is bound to the frontend and exposes connection management, the
+// master-password vault (below), and the session manager (see session.go).
 type App struct {
 	ctx      context.Context
 	sessions *sessionManager
+
+	// vaultKey is the key derived from the master password, held only in
+	// memory for the lifetime of the running app; it is never persisted.
+	// nil means the vault is locked (no master password created/entered
+	// yet this run).
+	vaultMu  sync.RWMutex
+	vaultKey []byte
 }
 
 // NewApp creates a new App application struct.
@@ -38,23 +49,171 @@ func (a *App) shutdown(ctx context.Context) {
 	}
 }
 
+// --- Master password vault ---
+
+// HasMasterPassword reports whether a master password has already been set
+// up on this machine.
+func (a *App) HasMasterPassword() (bool, error) {
+	mc, err := store.LoadMasterConfig()
+	if err != nil {
+		return false, fmt.Errorf("load master config: %w", err)
+	}
+	return mc != nil, nil
+}
+
+// CreateMasterPassword sets up the master password for the first time. It
+// fails if one has already been created.
+func (a *App) CreateMasterPassword(password string) error {
+	if len(password) < 8 {
+		return fmt.Errorf("master password must be at least 8 characters")
+	}
+
+	existing, err := store.LoadMasterConfig()
+	if err != nil {
+		return fmt.Errorf("load master config: %w", err)
+	}
+	if existing != nil {
+		return fmt.Errorf("a master password has already been set")
+	}
+
+	salt, err := vault.NewSalt()
+	if err != nil {
+		return err
+	}
+	key, err := vault.DeriveKey(password, salt)
+	if err != nil {
+		return err
+	}
+	check, err := vault.EncryptString(key, vault.CheckPlaintext)
+	if err != nil {
+		return fmt.Errorf("encrypt check value: %w", err)
+	}
+
+	mc := &store.MasterConfig{
+		Salt:  base64.StdEncoding.EncodeToString(salt),
+		Check: check,
+	}
+	if err := store.SaveMasterConfig(mc); err != nil {
+		return fmt.Errorf("save master config: %w", err)
+	}
+
+	a.vaultMu.Lock()
+	a.vaultKey = key
+	a.vaultMu.Unlock()
+	return nil
+}
+
+// UnlockMasterPassword verifies the given password against the stored
+// master config and, if correct, derives and holds the vault key for the
+// rest of this run.
+func (a *App) UnlockMasterPassword(password string) error {
+	mc, err := store.LoadMasterConfig()
+	if err != nil {
+		return fmt.Errorf("load master config: %w", err)
+	}
+	if mc == nil {
+		return fmt.Errorf("no master password has been set up")
+	}
+
+	salt, err := base64.StdEncoding.DecodeString(mc.Salt)
+	if err != nil {
+		return fmt.Errorf("decode salt: %w", err)
+	}
+	key, err := vault.DeriveKey(password, salt)
+	if err != nil {
+		return err
+	}
+
+	got, err := vault.DecryptString(key, mc.Check)
+	if err != nil || got != vault.CheckPlaintext {
+		return fmt.Errorf("incorrect master password")
+	}
+
+	a.vaultMu.Lock()
+	a.vaultKey = key
+	a.vaultMu.Unlock()
+	return nil
+}
+
+func (a *App) getVaultKey() ([]byte, error) {
+	a.vaultMu.RLock()
+	defer a.vaultMu.RUnlock()
+	if a.vaultKey == nil {
+		return nil, fmt.Errorf("vault is locked")
+	}
+	return a.vaultKey, nil
+}
+
+func (a *App) encryptPassword(plaintext string) (string, error) {
+	key, err := a.getVaultKey()
+	if err != nil {
+		return "", err
+	}
+	return vault.EncryptString(key, plaintext)
+}
+
+func (a *App) decryptPassword(ciphertext string) (string, error) {
+	key, err := a.getVaultKey()
+	if err != nil {
+		return "", err
+	}
+	return vault.DecryptString(key, ciphertext)
+}
+
+// --- Connections ---
+
+// ConnectionView is what ListConnections sends to the frontend: everything
+// about a saved connection except the encrypted password itself, which the
+// frontend never needs to see.
+type ConnectionView struct {
+	Name         string    `json:"name"`
+	Host         string    `json:"host"`
+	Port         int       `json:"port"`
+	User         string    `json:"user"`
+	IdentityFile string    `json:"identity_file,omitempty"`
+	LastUsed     time.Time `json:"last_used,omitempty"`
+	HasPassword  bool      `json:"hasPassword"`
+}
+
 // ListConnections returns all saved connections, most recently used first.
-func (a *App) ListConnections() ([]store.Connection, error) {
+func (a *App) ListConnections() ([]ConnectionView, error) {
 	s, err := store.Load()
 	if err != nil {
 		return nil, fmt.Errorf("load connections: %w", err)
 	}
-	return s.List(), nil
+
+	conns := s.List()
+	views := make([]ConnectionView, len(conns))
+	for i, c := range conns {
+		views[i] = ConnectionView{
+			Name:         c.Name,
+			Host:         c.Host,
+			Port:         c.Port,
+			User:         c.User,
+			IdentityFile: c.IdentityFile,
+			LastUsed:     c.LastUsed,
+			HasPassword:  c.Password != "",
+		}
+	}
+	return views, nil
 }
 
 // AddConnectionInput mirrors store.Connection but omits fields the frontend
-// shouldn't set directly (LastUsed).
+// shouldn't set directly (LastUsed), and carries a plaintext Password that
+// gets encrypted before it's ever written to disk.
 type AddConnectionInput struct {
 	Name         string `json:"name"`
 	Host         string `json:"host"`
 	Port         int    `json:"port"`
 	User         string `json:"user"`
 	IdentityFile string `json:"identityFile"`
+	// Password is plaintext from the form. Empty means "no change" on
+	// Update (see ClearPassword to explicitly remove a saved password),
+	// or "no saved password" on Add.
+	Password string `json:"password"`
+	// ClearPassword, on Update only, removes a previously saved password
+	// even though Password is left blank.
+	ClearPassword bool `json:"clearPassword"`
 }
 
 func (in AddConnectionInput) toConnection() (store.Connection, error) {
@@ -80,6 +239,14 @@ func (a *App) AddConnection(in AddConnectionInput) error {
 		return err
 	}
 
+	if in.Password != "" {
+		enc, err := a.encryptPassword(in.Password)
+		if err != nil {
+			return fmt.Errorf("encrypt password: %w", err)
+		}
+		c.Password = enc
+	}
+
 	s, err := store.Load()
 	if err != nil {
 		return fmt.Errorf("load connections: %w", err)
@@ -93,7 +260,8 @@ func (a *App) AddConnection(in AddConnectionInput) error {
 }
 
 // UpdateConnection replaces the connection named oldName with in, which may
-// rename it.
+// rename it. Leaving Password blank keeps the existing saved password (if
+// any); set ClearPassword to remove it instead.
 func (a *App) UpdateConnection(oldName string, in AddConnectionInput) error {
 	c, err := in.toConnection()
 	if err != nil {
@@ -103,6 +271,21 @@ func (a *App) UpdateConnection(oldName string, in AddConnectionInput) error {
 	s, err := store.Load()
 	if err != nil {
 		return fmt.Errorf("load connections: %w", err)
+	}
+
+	switch {
+	case in.ClearPassword:
+		c.Password = ""
+	case in.Password != "":
+		enc, err := a.encryptPassword(in.Password)
+		if err != nil {
+			return fmt.Errorf("encrypt password: %w", err)
+		}
+		c.Password = enc
+	default:
+		if existing, ok := s.Get(oldName); ok {
+			c.Password = existing.Password
+		}
 	}
 
 	if err := s.Update(oldName, c); err != nil {
@@ -153,7 +336,9 @@ func (a *App) DeleteConnection(name string) error {
 // OpenSession starts a new terminal session for the named connection and
 // returns its session ID. The frontend should subscribe to
 // "session:<id>:data" and "session:<id>:closed" events before/after calling
-// this.
+// this. If the connection has a saved password, it's decrypted here and
+// handed to the session manager to auto-fill ssh's password prompt; the
+// plaintext never crosses back into the frontend.
 func (a *App) OpenSession(name string) (id string, err error) {
 	defer recoverToError(&err)
 
@@ -166,10 +351,17 @@ func (a *App) OpenSession(name string) (id string, err error) {
 		return "", fmt.Errorf("no connection named %q", name)
 	}
 
+	var password string
+	if c.Password != "" {
+		if p, err := a.decryptPassword(c.Password); err == nil {
+			password = p
+		}
+	}
+
 	_ = s.Touch(name)
 	_ = s.Save()
 
-	return a.sessions.open(c)
+	return a.sessions.open(c, password)
 }
 
 // WriteToSession sends input (keystrokes) to an open session's PTY.

@@ -6,7 +6,7 @@
     <title>Tether</title>
 </head>
 <body>
-<div id="app">
+<div id="app" class="hidden">
     <aside id="sidebar">
         <div id="sidebar-header">
             <span>Tether</span>
@@ -42,10 +42,30 @@
                 <button type="button" id="browse-identity-btn">Browse…</button>
             </span>
         </label>
+        <label>Password (optional)
+            <input name="password" type="password" placeholder="Leave blank to keep current" autocomplete="new-password"/>
+        </label>
+        <label id="clear-password-row" class="checkbox-row hidden">
+            <input name="clearPassword" type="checkbox"/>
+            Remove saved password
+        </label>
         <div id="add-error" class="error hidden"></div>
         <div class="modal-actions">
             <button type="button" id="add-cancel">Cancel</button>
             <button type="submit" id="add-submit">Save</button>
+        </div>
+    </form>
+</div>
+
+<div id="auth-overlay" class="modal hidden">
+    <form id="auth-form" class="modal-card">
+        <h2 id="auth-title">Set a master password</h2>
+        <p id="auth-description" class="auth-description"></p>
+        <label>Master password<input name="password" type="password" required autocomplete="off"/></label>
+        <label id="auth-confirm-row">Confirm master password<input name="confirmPassword" type="password" autocomplete="off"/></label>
+        <div id="auth-error" class="error hidden"></div>
+        <div class="modal-actions">
+            <button type="submit" id="auth-submit">Continue</button>
         </div>
     </form>
 </div>

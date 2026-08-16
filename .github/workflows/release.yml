@@ -55,6 +55,14 @@ jobs:
           choco install nsis -y
           echo "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
+      - name: Test vault package
+        # Scoped to ./vault/... rather than ./...: the main package has a
+        # //go:embed of frontend/dist, which doesn't exist yet at this
+        # point (it's produced by the wails build step below), so testing
+        # the whole module here would fail with "no matching files".
+        working-directory: cmd/tether-gui
+        run: go test ./vault/...
+
       - name: Build tether-portable.exe and installer
         working-directory: cmd/tether-gui
         run: wails build -platform windows/amd64 -nsis

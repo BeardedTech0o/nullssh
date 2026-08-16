@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/google/uuid"
@@ -10,6 +11,11 @@ import (
 
 	"github.com/BeardedTech0o/tether/internal/store"
 )
+
+// passwordPromptTail is how much recently-seen output pump() keeps around
+// (in the worst case) to recognize ssh's password prompt even if it arrives
+// split across multiple reads.
+const passwordPromptTail = 256
 
 // pty abstracts a pseudo-terminal running "ssh" for a saved connection.
 // The real implementation (pty_windows.go) uses ConPTY; pty_other.go is a
@@ -41,7 +47,10 @@ func newSessionManager(ctx context.Context) *sessionManager {
 	}
 }
 
-func (m *sessionManager) open(c store.Connection) (string, error) {
+// open starts ssh for c attached to a new pseudo-terminal. If password is
+// non-empty, it's typed into the session automatically the first time ssh's
+// password prompt is seen in the output, then never referenced again.
+func (m *sessionManager) open(c store.Connection, password string) (string, error) {
 	p, err := startPTY(c)
 	if err != nil {
 		return "", fmt.Errorf("start session: %w", err)
@@ -53,7 +62,7 @@ func (m *sessionManager) open(c store.Connection) (string, error) {
 	m.sessions[id] = p
 	m.mu.Unlock()
 
-	go m.pump(id, p)
+	go m.pump(id, p, password)
 
 	return id, nil
 }
@@ -63,7 +72,7 @@ func (m *sessionManager) open(c store.Connection) (string, error) {
 // frontend exactly once, even if reading panics — a panic on any goroutine
 // in a Wails app would otherwise crash the whole window, not just this
 // session, since the backend and the window share one OS process.
-func (m *sessionManager) pump(id string, p pty) {
+func (m *sessionManager) pump(id string, p pty, password string) {
 	defer func() {
 		recover()
 
@@ -75,11 +84,32 @@ func (m *sessionManager) pump(id string, p pty) {
 		runtime.EventsEmit(m.ctx, "session:"+id+":closed")
 	}()
 
+	var tail strings.Builder
+	passwordSent := password == "" // nothing to send, skip the scanning work entirely
+
 	buf := make([]byte, 32*1024)
 	for {
 		n, err := p.Read(buf)
 		if n > 0 {
-			runtime.EventsEmit(m.ctx, "session:"+id+":data", string(buf[:n]))
+			chunk := buf[:n]
+			runtime.EventsEmit(m.ctx, "session:"+id+":data", string(chunk))
+
+			if !passwordSent {
+				tail.Write(chunk)
+				s := tail.String()
+				if len(s) > passwordPromptTail {
+					s = s[len(s)-passwordPromptTail:]
+					tail.Reset()
+					tail.WriteString(s)
+				}
+				// ssh's password prompt ends in "password: " (capitalization
+				// and exact wording vary by server/locale, but this
+				// substring is effectively universal).
+				if strings.Contains(strings.ToLower(s), "password:") {
+					passwordSent = true
+					_, _ = p.Write([]byte(password + "\r"))
+				}
+			}
 		}
 		if err != nil {
 			return
