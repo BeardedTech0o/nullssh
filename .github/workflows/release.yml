@@ -67,18 +67,18 @@ jobs:
         working-directory: cmd/tether-gui
         run: wails build -platform windows/amd64 -nsis
 
-      - name: Verify installer was produced and rename to Tether-Setup.exe
+      - name: Verify installer was produced and rename to tether-setup.exe
         working-directory: cmd/tether-gui
         run: |
           if (-not (Test-Path "build\bin\tether-gui-amd64-installer.exe")) {
             Write-Error "NSIS installer was not produced (wails build only warns, doesn't fail, if makensis is missing)"
             exit 1
           }
-          Move-Item "build\bin\tether-gui-amd64-installer.exe" "build\bin\Tether-Setup.exe"
+          Move-Item "build\bin\tether-gui-amd64-installer.exe" "build\bin\tether-setup.exe"
 
       - name: Upload tether-gui to release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             cmd/tether-gui/build/bin/tether-portable.exe
-            cmd/tether-gui/build/bin/Tether-Setup.exe
+            cmd/tether-gui/build/bin/tether-setup.exe

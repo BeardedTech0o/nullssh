@@ -44,7 +44,7 @@ Download the latest release from the
 
 | File | What it is |
 |---|---|
-| `Tether-Setup.exe` | The installer. Runs a Windows install wizard, adds Start Menu and Desktop shortcuts, and registers an uninstaller in "Add or remove programs". |
+| `tether-setup.exe` | The installer. Runs a Windows install wizard, adds Start Menu and Desktop shortcuts, and registers an uninstaller in "Add or remove programs". |
 | `tether-portable.exe` | The GUI as a single portable exe. No install step, just run it. |
 | `tether-cli.exe` | The portable command line tool. |
 
@@ -81,7 +81,7 @@ saved snippet to reveal **✎ Edit**, which also lets you delete it.
 
 Paste into a terminal with Ctrl+V, Shift+Insert, or right-click.
 
-![Tether Connection Settings](https://raw.githubusercontent.com/BeardedTech0o/tether/main/internal/tether.png)
+![Tether Connection Settings](https://raw.githubusercontent.com/BeardedTech0o/tether/main/internal/tetherpw.png)
 
 ## Using the CLI
 
