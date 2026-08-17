@@ -139,11 +139,20 @@ function insertSnippet(command) {
         alert('Open a session first, then click a snippet to insert it.');
         return;
     }
-    // No trailing newline: this types the command into the terminal without
-    // submitting it, so it can be edited (e.g. replacing "mysession")
-    // before pressing Enter.
-    WriteToSession(activeSessionId, command).catch((err) => console.error(err));
-    sessions.get(activeSessionId).term.focus();
+    // Route through xterm's own paste handling (term.paste), the same path
+    // real clipboard paste uses, rather than writing straight to the
+    // session. A raw WriteToSession call skips xterm's bracketed-paste
+    // handling, and some remote shells (zsh/fish with autosuggestion
+    // plugins) redraw the input line when they receive an unbracketed
+    // burst of text, which showed up as the command appearing twice.
+    // term.paste() still ends up calling WriteToSession under the hood via
+    // the existing onData listener, just through the correct pipeline.
+    // No trailing newline: this types the command into the terminal
+    // without submitting it, so it can be edited (e.g. replacing
+    // "mysession") before pressing Enter.
+    const s = sessions.get(activeSessionId);
+    s.term.paste(command);
+    s.term.focus();
 }
 
 // Close the dropdown on an outside click, like a normal menu.
