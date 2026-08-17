@@ -13,6 +13,7 @@ import (
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"github.com/BeardedTech0o/tether/cmd/tether-gui/vault"
+	"github.com/BeardedTech0o/tether/internal/sshexec"
 	"github.com/BeardedTech0o/tether/internal/store"
 )
 
@@ -224,13 +225,17 @@ func (in AddConnectionInput) toConnection() (store.Connection, error) {
 	if in.Port == 0 {
 		in.Port = 22
 	}
-	return store.Connection{
+	c := store.Connection{
 		Name:         in.Name,
 		Host:         in.Host,
 		Port:         in.Port,
 		User:         in.User,
 		IdentityFile: in.IdentityFile,
-	}, nil
+	}
+	if err := sshexec.Validate(c); err != nil {
+		return store.Connection{}, err
+	}
+	return c, nil
 }
 
 // AddConnection saves a new connection.

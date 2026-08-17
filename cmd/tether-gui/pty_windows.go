@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/UserExistsError/conpty"
 
@@ -26,6 +27,19 @@ type conptyPTY struct {
 
 func startPTY(c store.Connection) (pty, error) {
 	args := append([]string{"ssh"}, sshexec.Args(c)...)
+
+	// conpty.Start takes a single raw command line and hands it straight to
+	// CreateProcess with no quoting of its own, unlike os/exec (which the
+	// CLI uses and which quotes each argument individually). ssh.exe parses
+	// its own argv from that raw string by splitting on unquoted
+	// whitespace, so joining args with a plain space would let an
+	// unescaped space in a saved Host/User/IdentityFile value inject
+	// additional ssh flags — most dangerously -oProxyCommand=..., which
+	// runs an arbitrary local command. Escape each argument the same way
+	// os/exec does on Windows before joining.
+	for i, arg := range args {
+		args[i] = syscall.EscapeArg(arg)
+	}
 	commandLine := strings.Join(args, " ")
 
 	cpty, err := conpty.Start(commandLine)

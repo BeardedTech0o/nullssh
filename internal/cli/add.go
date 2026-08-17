@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/BeardedTech0o/tether/internal/sshexec"
 	"github.com/BeardedTech0o/tether/internal/store"
 )
 
@@ -47,6 +48,11 @@ func runAdd(args []string) int {
 		User:         *user,
 		Port:         *port,
 		IdentityFile: *identity,
+	}
+
+	if err := sshexec.Validate(c); err != nil {
+		fmt.Fprintln(os.Stderr, "tether add:", err)
+		return 1
 	}
 
 	if err := s.Add(c); err != nil {
