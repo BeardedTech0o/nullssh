@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"github.com/BeardedTech0o/tether/cmd/tether-gui/vault"
@@ -328,6 +329,92 @@ func (a *App) DeleteConnection(name string) error {
 		return fmt.Errorf("load connections: %w", err)
 	}
 	if err := s.Delete(name); err != nil {
+		return err
+	}
+	return s.Save()
+}
+
+// --- Snippets ---
+
+// ListSnippets returns all saved snippets. The frontend groups them by
+// Category for display.
+func (a *App) ListSnippets() ([]store.Snippet, error) {
+	s, err := store.LoadSnippets()
+	if err != nil {
+		return nil, fmt.Errorf("load snippets: %w", err)
+	}
+	return s.Snippets, nil
+}
+
+// SnippetInput is what the frontend submits when creating or editing a
+// snippet.
+type SnippetInput struct {
+	Category string `json:"category"`
+	Label    string `json:"label"`
+	Command  string `json:"command"`
+}
+
+func (in SnippetInput) validate() error {
+	if in.Category == "" || in.Label == "" || in.Command == "" {
+		return fmt.Errorf("category, label, and command are required")
+	}
+	return nil
+}
+
+// AddSnippet saves a new snippet and returns it (with its assigned ID).
+func (a *App) AddSnippet(in SnippetInput) (store.Snippet, error) {
+	if err := in.validate(); err != nil {
+		return store.Snippet{}, err
+	}
+
+	s, err := store.LoadSnippets()
+	if err != nil {
+		return store.Snippet{}, fmt.Errorf("load snippets: %w", err)
+	}
+
+	sn := store.Snippet{
+		ID:       uuid.NewString(),
+		Category: in.Category,
+		Label:    in.Label,
+		Command:  in.Command,
+	}
+	s.Add(sn)
+
+	if err := s.Save(); err != nil {
+		return store.Snippet{}, fmt.Errorf("save snippets: %w", err)
+	}
+	return sn, nil
+}
+
+// UpdateSnippet replaces the snippet with the given ID.
+func (a *App) UpdateSnippet(id string, in SnippetInput) error {
+	if err := in.validate(); err != nil {
+		return err
+	}
+
+	s, err := store.LoadSnippets()
+	if err != nil {
+		return fmt.Errorf("load snippets: %w", err)
+	}
+
+	if err := s.Update(id, store.Snippet{
+		Category: in.Category,
+		Label:    in.Label,
+		Command:  in.Command,
+	}); err != nil {
+		return err
+	}
+
+	return s.Save()
+}
+
+// DeleteSnippet removes a saved snippet by ID.
+func (a *App) DeleteSnippet(id string) error {
+	s, err := store.LoadSnippets()
+	if err != nil {
+		return fmt.Errorf("load snippets: %w", err)
+	}
+	if err := s.Delete(id); err != nil {
 		return err
 	}
 	return s.Save()

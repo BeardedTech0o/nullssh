@@ -18,8 +18,11 @@
         <div id="tab-bar">
             <div id="tabs-container"></div>
             <details id="snippets-section">
-                <summary id="snippets-header">tmux snippets</summary>
-                <ul id="snippets-list"></ul>
+                <summary id="snippets-header">Snippets</summary>
+                <div id="snippets-dropdown">
+                    <ul id="snippets-list"></ul>
+                    <button type="button" id="add-snippet-btn">+ Add snippet</button>
+                </div>
             </details>
         </div>
         <div id="terminal-area"></div>
@@ -53,6 +56,24 @@
         <div class="modal-actions">
             <button type="button" id="add-cancel">Cancel</button>
             <button type="submit" id="add-submit">Save</button>
+        </div>
+    </form>
+</div>
+
+<div id="snippet-modal" class="modal hidden">
+    <form id="snippet-form" class="modal-card">
+        <h2 id="snippet-modal-title">Add snippet</h2>
+        <label>Category
+            <input name="category" list="snippet-category-options" required autocomplete="off" placeholder="e.g. tmux"/>
+            <datalist id="snippet-category-options"></datalist>
+        </label>
+        <label>Label<input name="label" required autocomplete="off" placeholder="e.g. New session"/></label>
+        <label>Command<input name="command" required autocomplete="off" placeholder="e.g. tmux new -s mysession"/></label>
+        <div id="snippet-error" class="error hidden"></div>
+        <div class="modal-actions">
+            <button type="button" id="snippet-delete" class="danger hidden">Delete</button>
+            <button type="button" id="snippet-cancel">Cancel</button>
+            <button type="submit" id="snippet-submit">Save</button>
         </div>
     </form>
 </div>

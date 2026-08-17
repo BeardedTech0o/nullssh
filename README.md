@@ -26,9 +26,10 @@ It ships two ways to work, sharing the same saved connections:
 * Browse for identity files with a native file picker that opens
   straight into `~/.ssh`.
 * Saved passwords, protected by a master password. See below.
-* tmux snippets. Insert common `tmux` commands into the active session
-  without submitting them, so you can adjust a session name before
-  pressing Enter.
+* Snippets. Insert a saved command into the active session without
+  submitting it, so you can adjust it (for example a session name)
+  before pressing Enter. Comes with a set of built-in tmux snippets, and
+  you can add your own under any category.
 * Copy and paste that actually works: Ctrl+V, Shift+Insert, or
   right-click.
 * Shared state. The GUI and CLI read and write the same saved
@@ -67,10 +68,14 @@ protects and why it's required.
 5. Hover a saved connection to reveal **✎ Edit** (change any field or
    rename it) and **✕ Delete**.
 
-The tmux snippets dropdown on the right of the tab bar inserts a common
-`tmux` command into the active terminal without submitting it, so you
-can edit it (for example swap out `mysession` for a real name) before
-pressing Enter.
+The Snippets dropdown on the right of the tab bar lists saved snippets
+grouped under category headers, starting with a built-in tmux category.
+Click one to insert it into the active terminal without submitting it,
+so you can edit it (for example swap out `mysession` for a real name)
+before pressing Enter. Use **+ Add snippet** to save your own, giving
+it a category, a label, and the command itself; a new category name
+creates its own header, and reusing an existing one adds to it. Hover a
+saved snippet to reveal **✎ Edit**, which also lets you delete it.
 
 Paste into a terminal with Ctrl+V, Shift+Insert, or right-click.
 
@@ -154,7 +159,8 @@ identity files.
 Connections are stored as JSON in `%APPDATA%\tether\connections.json`,
 shared by both the GUI and CLI. The master password configuration lives
 alongside it in `%APPDATA%\tether\master.json` (just a salt and a
-verification value, never the password itself).
+verification value, never the password itself), and snippets in
+`%APPDATA%\tether\snippets.json`.
 
 ## How it's built
 

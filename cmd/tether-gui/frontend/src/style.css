@@ -13,6 +13,10 @@
     box-sizing: border-box;
 }
 
+.hidden {
+    display: none;
+}
+
 html, body {
     height: 100%;
     margin: 0;
@@ -81,15 +85,37 @@ html, body {
     min-height: 60px;
 }
 
+.snippet-category-header {
+    padding: 8px 8px 4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+.snippet-category-header:first-child {
+    padding-top: 0;
+}
+
 .snippet-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     padding: 6px 8px;
     border-radius: 6px;
     cursor: pointer;
     margin-bottom: 2px;
+    gap: 8px;
 }
 
 .snippet-item:hover {
     background: var(--panel-alt);
+}
+
+.snippet-info {
+    flex: 1;
+    min-width: 0;
 }
 
 .snippet-label {
@@ -105,6 +131,27 @@ html, body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.snippet-edit {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    visibility: hidden;
+}
+
+.snippet-item:hover .snippet-edit {
+    visibility: visible;
+}
+
+.snippet-edit:hover {
+    color: var(--accent);
+    background: rgba(79, 140, 255, 0.1);
 }
 
 .connection-item {
@@ -275,21 +322,43 @@ html, body {
     background: var(--panel-alt);
 }
 
-#snippets-list {
+#snippets-dropdown {
     position: absolute;
     top: calc(100% + 4px);
     right: 0;
     z-index: 20;
-    width: 280px;
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+}
+
+#snippets-list {
     max-height: 320px;
     margin: 0;
     padding: 6px;
     list-style: none;
     overflow-y: auto;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+#add-snippet-btn {
+    flex-shrink: 0;
+    border: none;
+    border-top: 1px solid var(--border);
+    background: var(--panel-alt);
+    color: var(--text-dim);
+    padding: 8px 12px;
+    font-size: 12px;
+    text-align: left;
+    cursor: pointer;
+}
+
+#add-snippet-btn:hover {
+    color: var(--text);
 }
 
 #terminal-area {
@@ -466,10 +535,22 @@ html, body {
 }
 
 #add-submit,
-#auth-submit {
+#auth-submit,
+#snippet-submit {
     background: var(--accent);
     border-color: var(--accent);
     color: white;
+}
+
+.modal-actions button.danger {
+    margin-right: auto;
+    background: transparent;
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.modal-actions button.danger:hover {
+    background: rgba(229, 84, 77, 0.1);
 }
 
 #auth-overlay .modal-actions {

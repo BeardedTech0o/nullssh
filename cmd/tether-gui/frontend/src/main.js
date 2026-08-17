@@ -16,6 +16,10 @@ import {
     HasMasterPassword,
     CreateMasterPassword,
     UnlockMasterPassword,
+    ListSnippets,
+    AddSnippet,
+    UpdateSnippet,
+    DeleteSnippet,
 } from '../wailsjs/go/main/App';
 import {EventsOn, EventsOff, ClipboardGetText} from '../wailsjs/runtime/runtime';
 
@@ -34,6 +38,14 @@ const browseIdentityBtn = document.getElementById('browse-identity-btn');
 const clearPasswordRow = document.getElementById('clear-password-row');
 const snippetsSectionEl = document.getElementById('snippets-section');
 const snippetsListEl = document.getElementById('snippets-list');
+const addSnippetBtn = document.getElementById('add-snippet-btn');
+const snippetModal = document.getElementById('snippet-modal');
+const snippetModalTitle = document.getElementById('snippet-modal-title');
+const snippetForm = document.getElementById('snippet-form');
+const snippetCancel = document.getElementById('snippet-cancel');
+const snippetDelete = document.getElementById('snippet-delete');
+const snippetError = document.getElementById('snippet-error');
+const snippetCategoryOptions = document.getElementById('snippet-category-options');
 const authOverlay = document.getElementById('auth-overlay');
 const authTitle = document.getElementById('auth-title');
 const authDescription = document.getElementById('auth-description');
@@ -49,39 +61,74 @@ let editingName = null;
 const sessions = new Map();
 let activeSessionId = null;
 
-// Commands only (no key-chord shortcuts like "Ctrl+b d"): those are typed
-// into a shell and can be edited before pressing Enter, which is the whole
-// point of a snippet. A chord like Ctrl+b is sent as raw control bytes and
-// acts immediately, so it doesn't fit this "insert, then edit" model.
-const TMUX_SNIPPETS = [
-    {label: 'New session', command: 'tmux new -s mysession'},
-    {label: 'List sessions', command: 'tmux ls'},
-    {label: 'Attach to session', command: 'tmux attach -t mysession'},
-    {label: 'Attach, detaching others', command: 'tmux attach -d -t mysession'},
-    {label: 'Rename session', command: 'tmux rename-session -t mysession newname'},
-    {label: 'Kill session', command: 'tmux kill-session -t mysession'},
-    {label: 'Kill all other sessions', command: 'tmux kill-session -a'},
-];
+// Name/ID of the snippet currently being edited, or null when the modal is
+// in "add" mode.
+let editingSnippetId = null;
 
-function renderSnippets() {
+async function refreshSnippets() {
+    const snippets = await ListSnippets();
     snippetsListEl.innerHTML = '';
-    for (const s of TMUX_SNIPPETS) {
+    snippetCategoryOptions.innerHTML = '';
+
+    if (!snippets || snippets.length === 0) {
         const li = document.createElement('li');
-        li.className = 'snippet-item';
-        li.title = 'Insert into the active session (not submitted)';
-
-        const label = document.createElement('span');
-        label.className = 'snippet-label';
-        label.textContent = s.label;
-        const command = document.createElement('span');
-        command.className = 'snippet-command';
-        command.textContent = s.command;
-
-        li.appendChild(label);
-        li.appendChild(command);
-        li.addEventListener('click', () => insertSnippet(s.command));
-
+        li.className = 'empty-list';
+        li.textContent = 'No snippets yet.';
         snippetsListEl.appendChild(li);
+        return;
+    }
+
+    // Group by category, preserving first-seen category order.
+    const byCategory = new Map();
+    for (const s of snippets) {
+        if (!byCategory.has(s.category)) byCategory.set(s.category, []);
+        byCategory.get(s.category).push(s);
+    }
+
+    for (const category of byCategory.keys()) {
+        const option = document.createElement('option');
+        option.value = category;
+        snippetCategoryOptions.appendChild(option);
+    }
+
+    for (const [category, items] of byCategory) {
+        const header = document.createElement('li');
+        header.className = 'snippet-category-header';
+        header.textContent = category;
+        snippetsListEl.appendChild(header);
+
+        for (const s of items) {
+            const li = document.createElement('li');
+            li.className = 'snippet-item';
+            li.title = 'Insert into the active session (not submitted)';
+
+            const info = document.createElement('div');
+            info.className = 'snippet-info';
+            const label = document.createElement('span');
+            label.className = 'snippet-label';
+            label.textContent = s.label;
+            const command = document.createElement('span');
+            command.className = 'snippet-command';
+            command.textContent = s.command;
+            info.appendChild(label);
+            info.appendChild(command);
+
+            const edit = document.createElement('button');
+            edit.className = 'snippet-edit';
+            edit.type = 'button';
+            edit.textContent = '✎';
+            edit.title = 'Edit snippet';
+            edit.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openEditSnippetModal(s);
+            });
+
+            li.appendChild(info);
+            li.appendChild(edit);
+            li.addEventListener('click', () => insertSnippet(s.command));
+
+            snippetsListEl.appendChild(li);
+        }
     }
 }
 
@@ -103,6 +150,71 @@ function insertSnippet(command) {
 document.addEventListener('click', (e) => {
     if (snippetsSectionEl.open && !snippetsSectionEl.contains(e.target)) {
         snippetsSectionEl.open = false;
+    }
+});
+
+addSnippetBtn.addEventListener('click', () => {
+    snippetsSectionEl.open = false;
+    editingSnippetId = null;
+    snippetModalTitle.textContent = 'Add snippet';
+    snippetError.classList.add('hidden');
+    snippetDelete.classList.add('hidden');
+    snippetForm.reset();
+    snippetModal.classList.remove('hidden');
+    snippetForm.category.focus();
+});
+
+function openEditSnippetModal(s) {
+    snippetsSectionEl.open = false;
+    editingSnippetId = s.id;
+    snippetModalTitle.textContent = 'Edit snippet';
+    snippetError.classList.add('hidden');
+    snippetDelete.classList.remove('hidden');
+    snippetForm.reset();
+    snippetForm.category.value = s.category;
+    snippetForm.label.value = s.label;
+    snippetForm.command.value = s.command;
+    snippetModal.classList.remove('hidden');
+    snippetForm.category.focus();
+}
+
+snippetCancel.addEventListener('click', () => {
+    snippetModal.classList.add('hidden');
+});
+
+snippetDelete.addEventListener('click', async () => {
+    if (!editingSnippetId) return;
+    try {
+        await DeleteSnippet(editingSnippetId);
+        snippetModal.classList.add('hidden');
+        await refreshSnippets();
+    } catch (err) {
+        snippetError.textContent = String(err);
+        snippetError.classList.remove('hidden');
+    }
+});
+
+snippetForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    snippetError.classList.add('hidden');
+
+    const input = {
+        category: snippetForm.category.value.trim(),
+        label: snippetForm.label.value.trim(),
+        command: snippetForm.command.value.trim(),
+    };
+
+    try {
+        if (editingSnippetId) {
+            await UpdateSnippet(editingSnippetId, input);
+        } else {
+            await AddSnippet(input);
+        }
+        snippetModal.classList.add('hidden');
+        await refreshSnippets();
+    } catch (err) {
+        snippetError.textContent = String(err);
+        snippetError.classList.remove('hidden');
     }
 });
 
@@ -459,7 +571,7 @@ function unlockApp() {
     appEl.classList.remove('hidden');
     updateEmptyState();
     refreshConnections();
-    renderSnippets();
+    refreshSnippets();
 }
 
 startAuthFlow();
