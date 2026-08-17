@@ -2,6 +2,8 @@
 
 An SSH connection manager for Windows.
 
+![Tether Description](https://raw.githubusercontent.com/BeardedTech0o/tether/main/internal/tether.png)
+
 Save your SSH connections once, then open, switch between, and manage
 them without retyping hosts, users, or key paths. Tether wraps your
 existing OpenSSH client rather than reimplementing the SSH protocol, so
@@ -78,6 +80,8 @@ creates its own header, and reusing an existing one adds to it. Hover a
 saved snippet to reveal **✎ Edit**, which also lets you delete it.
 
 Paste into a terminal with Ctrl+V, Shift+Insert, or right-click.
+
+![Tether Connection Settings](https://raw.githubusercontent.com/BeardedTech0o/tether/main/internal/tether.png)
 
 ## Using the CLI
 
