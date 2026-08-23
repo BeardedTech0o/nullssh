@@ -1,4 +1,4 @@
-![nullssh banner](https://raw.githubusercontent.com/BeardedTech0o/nullssh/main/internal/nullssh-banner.png)
+![nullssh banner](https://github.com/BeardedTech0o/tether/blob/main/internal/nullssh-banner.png)
 
 # nullssh
 
