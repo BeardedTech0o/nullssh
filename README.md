@@ -1,4 +1,4 @@
-![nullssh banner](https://raw.githubusercontent.com/BeardedTech0o/tether/main/internal/nullssh-banner.png)
+![nullssh banner](https://raw.githubusercontent.com/BeardedTech0o/nullssh/main/internal/nullssh-banner.png)
 
 # nullssh
 
@@ -72,7 +72,7 @@ Core features across both:
 ## Install
 
 Download the latest release from the
-[Releases](https://github.com/BeardedTech0o/tether/releases) page.
+[Releases](https://github.com/BeardedTech0o/nullssh/releases) page.
 
 | File | What it is |
 |---|---|
@@ -117,7 +117,7 @@ Click **⚙** in the sidebar to open Settings, where you can switch the
 app's appearance between Light, Dark, and System (follows your OS
 setting and updates live if it changes).
 
-![Tether Connection Settings](https://raw.githubusercontent.com/BeardedTech0o/tether/main/internal/tetherpw.png)
+![Tether Connection Settings](https://raw.githubusercontent.com/BeardedTech0o/nullssh/main/internal/tetherpw.png)
 
 ## Using the CLI
 
@@ -242,4 +242,4 @@ you spot a bug or have a suggestion, open an issue.
 
 ## Licence
 
-Add your licence here.
+[MIT](LICENSE)
