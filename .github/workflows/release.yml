@@ -4,9 +4,17 @@ on:
   push:
     tags:
       - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Version tag to release, e.g. v0.3.0"
+        required: true
 
 permissions:
   contents: write
+
+env:
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 
 jobs:
   build-cli:
@@ -30,6 +38,7 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.RELEASE_TAG }}
           files: tether-cli.exe
           generate_release_notes: true
 
@@ -79,6 +88,7 @@ jobs:
       - name: Upload tether-gui to release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.RELEASE_TAG }}
           files: |
             cmd/tether-gui/build/bin/tether-portable.exe
             cmd/tether-gui/build/bin/tether-setup.exe
