@@ -76,9 +76,9 @@ Download the latest release from the
 
 | File | What it is |
 |---|---|
-| `tether-setup.exe` | The installer. Runs a Windows install wizard, adds Start Menu and Desktop shortcuts, and registers an uninstaller in "Add or remove programs". |
-| `tether-portable.exe` | The GUI as a single portable exe. No install step, just run it. |
-| `tether-cli.exe` | The portable command line tool. |
+| `nullssh-setup.exe` | The installer. Runs a Windows install wizard, adds Start Menu and Desktop shortcuts, and registers an uninstaller in "Add or remove programs". |
+| `nullssh-portable.exe` | The GUI as a single portable exe. No install step, just run it. |
+| `nullssh-cli.exe` | The portable command line tool. |
 
 nullssh requires the OpenSSH client (`ssh`) to be on your `PATH`, which
 is bundled with Windows 10 and later by default.
@@ -86,7 +86,7 @@ is bundled with Windows 10 and later by default.
 ## Using the GUI
 
 Launch nullssh (from the Start Menu if you used the installer, or by
-running `tether-portable.exe`).
+running `nullssh-portable.exe`).
 
 The first time you launch it, you'll be asked to set a master password.
 See [Authentication](#authentication) below for what this protects and
@@ -122,24 +122,24 @@ setting and updates live if it changes).
 ## Using the CLI
 
 ```
-tether-cli add <name> --host <host> --user <user> [--port 22] [--identity path]
-tether-cli ls
-tether-cli connect <name>
-tether-cli switch
-tether-cli rm <name>
+nullssh-cli add <name> --host <host> --user <user> [--port 22] [--identity path]
+nullssh-cli ls
+nullssh-cli connect <name>
+nullssh-cli switch
+nullssh-cli rm <name>
 ```
 
-Running `tether-cli` with no arguments is the same as `tether-cli switch`.
+Running `nullssh-cli` with no arguments is the same as `nullssh-cli switch`.
 
 Save a connection:
 ```
-> tether-cli add prod --host 203.0.113.10 --user deploy --identity ~/.ssh/id_ed25519
+> nullssh-cli add prod --host 203.0.113.10 --user deploy --identity ~/.ssh/id_ed25519
 saved connection "prod" (deploy@203.0.113.10:22)
 ```
 
 List saved connections:
 ```
-> tether-cli ls
+> nullssh-cli ls
 NAME     TARGET                    LAST USED
 prod     deploy@203.0.113.10:22   2026-08-14 21:03
 staging  deploy@203.0.113.11:22   never
@@ -147,9 +147,9 @@ staging  deploy@203.0.113.11:22   never
 
 Connect directly, or pick interactively (most recently used first):
 ```
-> tether-cli connect prod
+> nullssh-cli connect prod
 
-> tether-cli switch
+> nullssh-cli switch
 Saved connections (most recently used first):
   1) prod                 deploy@203.0.113.10:22
   2) staging               deploy@203.0.113.11:22
@@ -158,7 +158,7 @@ Select a connection (number or name), or q to quit:
 
 Delete a connection:
 ```
-> tether-cli rm staging
+> nullssh-cli rm staging
 deleted connection "staging"
 ```
 
@@ -221,12 +221,12 @@ Building from source:
 ```sh
 # CLI
 go vet ./... && go test ./...
-GOOS=windows GOARCH=amd64 go build -o tether-cli.exe .
+GOOS=windows GOARCH=amd64 go build -o nullssh-cli.exe .
 
 # GUI (needs the Wails CLI, Node.js, and NSIS for the installer)
 go install github.com/wailsapp/wails/v2/cmd/wails@latest
 cd cmd/tether-gui
-wails build -platform windows/amd64         # -> build/bin/tether-portable.exe
+wails build -platform windows/amd64         # -> build/bin/nullssh-portable.exe
 wails build -platform windows/amd64 -nsis   # also builds the installer
 ```
 
