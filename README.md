@@ -1,41 +1,73 @@
-# Tether
+![nullssh banner](https://raw.githubusercontent.com/BeardedTech0o/tether/main/internal/nullssh-banner.png)
 
-An SSH connection manager for Windows.
+# nullssh
 
-![Tether Description](https://raw.githubusercontent.com/BeardedTech0o/tether/main/internal/tether.png)
+An SSH connection manager for Windows with custom snippets.
 
-Save your SSH connections once, then open, switch between, and manage
-them without retyping hosts, users, or key paths. Tether wraps your
-existing OpenSSH client rather than reimplementing the SSH protocol, so
+## The Problem
+
+Every SSH session starts the same way: dig up the right host, remember
+whether this one uses a key or a password, retype the user and port,
+then re-run the same three commands once you're in (attach the tmux
+session, cd into the deploy directory, tail the right log). None of
+that is hard, it's just friction that repeats every single time you
+connect to something.
+
+nullssh exists to remove that friction. Save a connection once and
+open it again with a click or one command; save a snippet once and
+insert it into any session without retyping it. It wraps your existing
+OpenSSH client rather than reimplementing the SSH protocol, so
 authentication, keys, and known hosts behave exactly as they do from a
-plain terminal.
+plain terminal — nullssh just remembers the details you'd otherwise
+retype.
 
-It ships two ways to work, sharing the same saved connections:
+## What's Inside
 
-* Desktop app: a sidebar of saved connections and a tabbed, embedded
-  terminal for every open session.
-* Command line: a scriptable CLI for saving, listing, and connecting
-  from a terminal or a script.
+nullssh ships two ways to work, sharing the same saved connections:
 
-## Features
+* **Desktop app** — a sidebar of saved connections and a tabbed,
+  embedded terminal for every open session, with light and dark
+  appearance built in.
+* **Command line** — a scriptable CLI for saving, listing, and
+  connecting from a terminal or a script.
+
+Core features across both:
 
 * Save connections once: name, host, port, user, and optionally an
   identity file or a saved password.
-* Embedded terminal sessions. Open a saved connection as a tab with a
-  real, interactive terminal. Open several at once and switch between
-  them by clicking tabs.
+* Embedded terminal sessions in the GUI. Open a saved connection as a
+  tab with a real, interactive terminal. Open several at once and
+  switch between them by clicking tabs.
 * Edit and delete connections in place, including renaming.
 * Browse for identity files with a native file picker that opens
   straight into `~/.ssh`.
-* Saved passwords, protected by a master password. See below.
+* Saved passwords, protected by a master password. See
+  [Authentication](#authentication) below.
 * Snippets. Insert a saved command into the active session without
   submitting it, so you can adjust it (for example a session name)
-  before pressing Enter. Comes with a set of built-in tmux snippets, and
-  you can add your own under any category.
+  before pressing Enter. Comes with a set of built-in tmux snippets,
+  and you can add your own under any category.
 * Copy and paste that actually works: Ctrl+V, Shift+Insert, or
   right-click.
 * Shared state. The GUI and CLI read and write the same saved
   connections, so either one stays in sync with the other.
+
+## Design Principles
+
+* **Wrap, don't reimplement.** nullssh hands connection details to the
+  real `ssh.exe` and lets your normal key, agent, or password setup
+  take it from there, exactly as if you'd typed the command yourself.
+  No custom SSH implementation to trust.
+* **Nothing typed twice.** If a value is already saved (a host, a
+  snippet, a session name), you should never have to retype it to use
+  it again.
+* **Credentials stay out of memory longer than they need to.** Saved
+  passwords are encrypted at rest and only decrypted in the Go
+  backend for the moment they're typed into the terminal; the master
+  password itself is never stored anywhere.
+* **The GUI and CLI are one tool, not two.** Both read and write the
+  same connection store, so switching between them mid-workflow never
+  loses state.
 
 ## Install
 
@@ -48,17 +80,17 @@ Download the latest release from the
 | `tether-portable.exe` | The GUI as a single portable exe. No install step, just run it. |
 | `tether-cli.exe` | The portable command line tool. |
 
-Tether requires the OpenSSH client (`ssh`) to be on your `PATH`, which is
-bundled with Windows 10 and later by default.
+nullssh requires the OpenSSH client (`ssh`) to be on your `PATH`, which
+is bundled with Windows 10 and later by default.
 
 ## Using the GUI
 
-Launch Tether (from the Start Menu if you used the installer, or by
+Launch nullssh (from the Start Menu if you used the installer, or by
 running `tether-portable.exe`).
 
 The first time you launch it, you'll be asked to set a master password.
-See "Saved passwords and the master password" below for what this
-protects and why it's required.
+See [Authentication](#authentication) below for what this protects and
+why it's required.
 
 1. Click **+** in the sidebar to save a connection: name, host, user,
    port, and optionally an identity file (use **Browse…** to pick a key
@@ -80,6 +112,10 @@ creates its own header, and reusing an existing one adds to it. Hover a
 saved snippet to reveal **✎ Edit**, which also lets you delete it.
 
 Paste into a terminal with Ctrl+V, Shift+Insert, or right-click.
+
+Click **⚙** in the sidebar to open Settings, where you can switch the
+app's appearance between Light, Dark, and System (follows your OS
+setting and updates live if it changes).
 
 ![Tether Connection Settings](https://raw.githubusercontent.com/BeardedTech0o/tether/main/internal/tetherpw.png)
 
@@ -131,12 +167,12 @@ below); it authenticates the same way plain `ssh` does.
 
 ## Authentication
 
-Tether never handles your credentials directly. It hands connection
+nullssh never handles your credentials directly. It hands connection
 details to the real `ssh.exe` and lets your normal key, agent, or
 password setup take it from there, exactly as if you'd typed the `ssh`
 command yourself.
 
-**Identity files.** Set one on a connection and Tether passes it to
+**Identity files.** Set one on a connection and nullssh passes it to
 `ssh` as `-i <path>`. Leave it blank and `ssh` falls back to its own
 defaults: keys already loaded in `ssh-agent` or Pageant, then the
 standard files in `~/.ssh` (`id_ed25519`, `id_rsa`, and so on). If the
@@ -150,11 +186,11 @@ interactive `ssh` process underneath.
 password on a connection, for servers where key based login isn't set
 up. Saved passwords are encrypted at rest with a key derived from a
 master password you set on first launch, and that master password is
-required every time you open Tether afterward. It is never stored
+required every time you open nullssh afterward. It is never stored
 anywhere, only used in memory to unlock the vault for that run, and it
 cannot be recovered if you forget it: connections with saved passwords
 would need their passwords re-entered. When you open a connection with
-a saved password, Tether waits for ssh's own password prompt in the
+a saved password, nullssh waits for ssh's own password prompt in the
 terminal and types the decrypted password in for you; the password
 never passes back through the browser layer of the app. Connections
 without a saved password behave exactly as described above under
@@ -168,7 +204,7 @@ verification value, never the password itself), and snippets in
 
 ## How it's built
 
-Tether is two Go programs sharing a common core (`internal/store` for
+nullssh is two Go programs sharing a common core (`internal/store` for
 saved connections, `internal/sshexec` for building `ssh` arguments):
 
 * CLI (repo root): a small stdlib only Go program that execs the system
@@ -198,3 +234,12 @@ The ConPTY-backed terminal only works on Windows. `go build` and
 `go vet` still succeed on other platforms for development, but opening
 a GUI session will return an error since there's no pseudo console
 backend for that OS.
+
+## Contributing
+
+This started as a personal tool tuned to one person's workflow, but if
+you spot a bug or have a suggestion, open an issue.
+
+## Licence
+
+Add your licence here.

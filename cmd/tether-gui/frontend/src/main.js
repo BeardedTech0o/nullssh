@@ -1,3 +1,4 @@
+import './tokens.css';
 import './style.css';
 import {Terminal} from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
@@ -46,6 +47,10 @@ const snippetCancel = document.getElementById('snippet-cancel');
 const snippetDelete = document.getElementById('snippet-delete');
 const snippetError = document.getElementById('snippet-error');
 const snippetCategoryOptions = document.getElementById('snippet-category-options');
+const settingsBtn = document.getElementById('settings-btn');
+const settingsModal = document.getElementById('settings-modal');
+const settingsDone = document.getElementById('settings-done');
+const themeOptionButtons = document.querySelectorAll('.theme-option');
 const authOverlay = document.getElementById('auth-overlay');
 const authTitle = document.getElementById('auth-title');
 const authDescription = document.getElementById('auth-description');
@@ -64,6 +69,66 @@ let activeSessionId = null;
 // Name/ID of the snippet currently being edited, or null when the modal is
 // in "add" mode.
 let editingSnippetId = null;
+
+// Theme: 'light' | 'dark' | 'system'. Persisted so it survives restarts;
+// 'system' is stored as the absence of a value (matches index.html's
+// pre-paint script, which only ever sets data-theme for an explicit
+// light/dark choice).
+const THEME_KEY = 'tether-theme';
+
+function getStoredTheme() {
+    const saved = localStorage.getItem(THEME_KEY);
+    return saved === 'light' || saved === 'dark' ? saved : 'system';
+}
+
+function currentTerminalBackground() {
+    return getComputedStyle(document.documentElement).getPropertyValue('--colour-surface-base').trim();
+}
+
+function refreshTerminalThemes() {
+    const background = currentTerminalBackground();
+    for (const s of sessions.values()) {
+        s.term.options.theme = {background};
+    }
+}
+
+function applyTheme(value) {
+    if (value === 'light' || value === 'dark') {
+        document.documentElement.setAttribute('data-theme', value);
+        localStorage.setItem(THEME_KEY, value);
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.removeItem(THEME_KEY);
+    }
+
+    for (const btn of themeOptionButtons) {
+        btn.classList.toggle('active', btn.dataset.themeValue === value);
+    }
+
+    refreshTerminalThemes();
+}
+
+for (const btn of themeOptionButtons) {
+    btn.addEventListener('click', () => applyTheme(btn.dataset.themeValue));
+}
+
+settingsBtn.addEventListener('click', () => {
+    settingsModal.classList.remove('hidden');
+});
+
+settingsDone.addEventListener('click', () => {
+    settingsModal.classList.add('hidden');
+});
+
+applyTheme(getStoredTheme());
+
+// In 'system' mode the CSS itself follows the OS preference via
+// prefers-color-scheme, but xterm's background is set in JS at terminal
+// creation time, so it needs an explicit refresh when the OS preference
+// changes while a session is already open.
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if (getStoredTheme() === 'system') refreshTerminalThemes();
+});
 
 async function refreshSnippets() {
     const snippets = await ListSnippets();
@@ -341,7 +406,7 @@ async function openConnection(name) {
 
     const term = new Terminal({
         convertEol: true,
-        theme: {background: '#12181f'},
+        theme: {background: currentTerminalBackground()},
         fontSize: 13,
     });
     const fit = new FitAddon();
