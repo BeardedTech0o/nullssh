@@ -29,17 +29,17 @@ jobs:
       - name: Test
         run: go test ./...
 
-      - name: Build tether-cli.exe
+      - name: Build nullssh-cli.exe
         env:
           GOOS: windows
           GOARCH: amd64
-        run: go build -o tether-cli.exe .
+        run: go build -o nullssh-cli.exe .
 
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
-          files: tether-cli.exe
+          files: nullssh-cli.exe
           generate_release_notes: true
 
   build-gui:
@@ -72,23 +72,23 @@ jobs:
         working-directory: cmd/tether-gui
         run: go test ./vault/...
 
-      - name: Build tether-portable.exe and installer
+      - name: Build nullssh-portable.exe and installer
         working-directory: cmd/tether-gui
         run: wails build -platform windows/amd64 -nsis
 
-      - name: Verify installer was produced and rename to tether-setup.exe
+      - name: Verify installer was produced and rename to nullssh-setup.exe
         working-directory: cmd/tether-gui
         run: |
           if (-not (Test-Path "build\bin\tether-gui-amd64-installer.exe")) {
             Write-Error "NSIS installer was not produced (wails build only warns, doesn't fail, if makensis is missing)"
             exit 1
           }
-          Move-Item "build\bin\tether-gui-amd64-installer.exe" "build\bin\tether-setup.exe"
+          Move-Item "build\bin\tether-gui-amd64-installer.exe" "build\bin\nullssh-setup.exe"
 
-      - name: Upload tether-gui to release
+      - name: Upload nullssh-gui to release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           files: |
-            cmd/tether-gui/build/bin/tether-portable.exe
-            cmd/tether-gui/build/bin/tether-setup.exe
+            cmd/tether-gui/build/bin/nullssh-portable.exe
+            cmd/tether-gui/build/bin/nullssh-setup.exe
