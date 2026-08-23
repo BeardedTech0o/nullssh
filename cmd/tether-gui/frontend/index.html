@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>Tether</title>
+    <title>nullssh</title>
     <script>
         // Applied before first paint so switching themes never flashes the
         // other theme on load. Kept in sync with the "theme" logic in
@@ -20,7 +20,7 @@
 <div id="app" class="hidden">
     <aside id="sidebar">
         <div id="sidebar-header">
-            <span>Tether</span>
+            <span>nullssh</span>
             <div id="sidebar-actions">
                 <button id="settings-btn" title="Settings">⚙</button>
                 <button id="add-btn" title="Add connection">+</button>
@@ -31,13 +31,7 @@
     <main id="main">
         <div id="tab-bar">
             <div id="tabs-container"></div>
-            <details id="snippets-section">
-                <summary id="snippets-header">Snippets</summary>
-                <div id="snippets-dropdown">
-                    <ul id="snippets-list"></ul>
-                    <button type="button" id="add-snippet-btn">+ Add snippet</button>
-                </div>
-            </details>
+            <button type="button" id="snippets-btn">Snippets</button>
         </div>
         <div id="terminal-area"></div>
         <div id="empty-state">
@@ -103,6 +97,17 @@
             <button type="submit" id="auth-submit">Continue</button>
         </div>
     </form>
+</div>
+
+<div id="snippets-modal" class="modal hidden">
+    <div class="modal-card">
+        <h2>Snippets</h2>
+        <ul id="snippets-list"></ul>
+        <button type="button" id="add-snippet-btn">+ Add snippet</button>
+        <div class="modal-actions">
+            <button type="button" id="snippets-done">Done</button>
+        </div>
+    </div>
 </div>
 
 <div id="settings-modal" class="modal hidden">

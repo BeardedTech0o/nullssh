@@ -37,7 +37,9 @@ const addCancel = document.getElementById('add-cancel');
 const addError = document.getElementById('add-error');
 const browseIdentityBtn = document.getElementById('browse-identity-btn');
 const clearPasswordRow = document.getElementById('clear-password-row');
-const snippetsSectionEl = document.getElementById('snippets-section');
+const snippetsBtn = document.getElementById('snippets-btn');
+const snippetsModal = document.getElementById('snippets-modal');
+const snippetsDone = document.getElementById('snippets-done');
 const snippetsListEl = document.getElementById('snippets-list');
 const addSnippetBtn = document.getElementById('add-snippet-btn');
 const snippetModal = document.getElementById('snippet-modal');
@@ -81,14 +83,22 @@ function getStoredTheme() {
     return saved === 'light' || saved === 'dark' ? saved : 'system';
 }
 
-function currentTerminalBackground() {
-    return getComputedStyle(document.documentElement).getPropertyValue('--colour-surface-base').trim();
+function currentTerminalTheme() {
+    const style = getComputedStyle(document.documentElement);
+    const v = (name) => style.getPropertyValue(name).trim();
+    return {
+        background: v('--colour-surface-base'),
+        foreground: v('--colour-text-primary'),
+        cursor: v('--colour-accent-teal'),
+        cursorAccent: v('--colour-surface-base'),
+        selectionBackground: v('--colour-accent-teal-light'),
+    };
 }
 
 function refreshTerminalThemes() {
-    const background = currentTerminalBackground();
+    const theme = currentTerminalTheme();
     for (const s of sessions.values()) {
-        s.term.options.theme = {background};
+        s.term.options.theme = theme;
     }
 }
 
@@ -198,7 +208,7 @@ async function refreshSnippets() {
 }
 
 function insertSnippet(command) {
-    snippetsSectionEl.open = false;
+    snippetsModal.classList.add('hidden');
 
     if (!activeSessionId || !sessions.has(activeSessionId)) {
         alert('Open a session first, then click a snippet to insert it.');
@@ -220,15 +230,16 @@ function insertSnippet(command) {
     s.term.focus();
 }
 
-// Close the dropdown on an outside click, like a normal menu.
-document.addEventListener('click', (e) => {
-    if (snippetsSectionEl.open && !snippetsSectionEl.contains(e.target)) {
-        snippetsSectionEl.open = false;
-    }
+snippetsBtn.addEventListener('click', () => {
+    snippetsModal.classList.remove('hidden');
+});
+
+snippetsDone.addEventListener('click', () => {
+    snippetsModal.classList.add('hidden');
 });
 
 addSnippetBtn.addEventListener('click', () => {
-    snippetsSectionEl.open = false;
+    snippetsModal.classList.add('hidden');
     editingSnippetId = null;
     snippetModalTitle.textContent = 'Add snippet';
     snippetError.classList.add('hidden');
@@ -239,7 +250,7 @@ addSnippetBtn.addEventListener('click', () => {
 });
 
 function openEditSnippetModal(s) {
-    snippetsSectionEl.open = false;
+    snippetsModal.classList.add('hidden');
     editingSnippetId = s.id;
     snippetModalTitle.textContent = 'Edit snippet';
     snippetError.classList.add('hidden');
@@ -406,7 +417,7 @@ async function openConnection(name) {
 
     const term = new Terminal({
         convertEol: true,
-        theme: {background: currentTerminalBackground()},
+        theme: currentTerminalTheme(),
         fontSize: 13,
     });
     const fit = new FitAddon();
